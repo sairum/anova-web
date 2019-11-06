@@ -13,8 +13,10 @@ While porting *anova-web* I aimed at developing a suit of software with the leas
 
 `$ make watch`
 
-This project depends on the presence of *inotifywatch* (a standard tool installed y default in most Linux systems) and Douglas Crockford's *jsmin* (https://www.crockford.com/jsmin.html) for minification of JavaScript files. Other than that, it depends only on one JavaScript library and one CSS Style sheet:
+This project depends on the presence of *inotifywatch* (a standard tool installed y default in most Linux systems) and Douglas Crockford's *jsmin* (https://www.crockford.com/jsmin.html) for minification of JavaScript files. Other than that, it depends only on three JavaScript libraries and one CSS Style sheet:
 
 * JStat (https://github.com/jstat/jstat) for probability distributions and related stuff
+* FileSaver.js (https://github.com/eligrey/FileSaver.js/) to generate files to download
+* seedrandom.js (https://github.com/davidbau/seedrandom) as a RNG with seed capabilities to be used by JStat
 * normalize.css (https://necolas.github.io/normalize.css/) to make browsers behave well
 
