@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>MBGE - Experimental Design</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/style.min.css">
+    </head>
+    <body>
+        <header>
+          <h1><a href="index.html">&#9776;&nbsp;</a>Experimental Design</h1>
+          <h2>Simulate data</h2>
+        </header>
+        
+        <main>
+          <div class="main">
+            <button class="button" onclick="ui.addFactor()">Add Factor</button>&nbsp;&nbsp;&nbsp;
+            Factor name <input type="text" id="fname">&nbsp;&nbsp;&nbsp;
+            Factor type <select id="ftype">
+              <option value="fixed" selected>Fixed</option>
+              <option value="random">Random</option>
+            </select>&nbsp;&nbsp;&nbsp;
+            Levels <input type="number" id="levels" min="2" max="1000" step="1" value="2">&nbsp;&nbsp;&nbsp;
+            Nested in <select id="nestedin" disabled>
+              <option value="-" selected>None</option>
+            </select>
+          </div>
+          
+          <div class="main" id="model">
+          Model
+          </div>
+          
+          <div class="main">
+            <div id="tabs">
+              <a href="#!" id="tdata"    class="tabs" onclick="ui.select('data')">Data</a>
+              <a href="#!" id="tresults" class="tabs" onclick="ui.select('results')">Results</a>
+            </div>
+            <div id="tab-contents">
+              <div class="tabcontent" id="data">
+                <div class="ct" id="parameters">
+                <table>
+                <tr>
+                <td><em>n</em> (replicates)</td><td><input type="number" id="replicates" min="2" value="5" step="1"></td>
+                </tr>
+                <tr>
+                <td>&mu; (average)</td><td><input type="number" id="average" min="0.0" value="5.0"></td>
+                </tr>
+                <tr>
+                <td>&sigma; (stdev)</td><td><input type="number" id="stdev" min="0.00001" value="0.5" step="0.005"></td>
+                </tr>
+                <tr>
+                <td>Max</td><td><input type="number" id="max" value="7.0" disabled></td>
+                </tr>
+                <tr>
+                <td>Min</td><td><input type="number" id="min" value="3.0" disabled></td>
+                </tr>
+                </table>
+                </div>
+                <div class="ct" id="distribution">
+                  <canvas id="chart" width="600" height="400"></canvas>
+                </div>
+              </div>
+              
+              <div class="tabcontent" id="results">
+                <div class="ct" id="settings">
+                  <table>
+                  <tr>
+                  <td>Seed</td><td><input id="seed" placeholder="empty is random"></td>
+                  </tr>
+                  <tr>
+                  <td></td><td><button class="button" id="generate" onclick="ui.generate()" disabled>Generate</button></td>
+                  </tr>
+                  <tr>
+                  <td></td><td><button class="button" id="download" onclick="ui.download()" disabled>Download</button></td>
+                  </tr>
+                  <tr>
+                  <td></td><td><button class="button" onclick="ui.reset()">Reset</button></td>
+                  </tr>
+                  </table>
+                </div> 
+                <div class="ct">
+                  <textarea id="result" cols="60" rows="30"></textarea>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          
+        </main>
+        
+        <footer>
+          © 2019 Copyright amsantos @ fc up pt
+        </footer>
+        <script type="text/javascript" src="js/jstat.min.js"></script>
+        <script type="text/javascript" src="js/seedrandom.min.js"></script>
+        <script type="text/javascript" src="js/FileSaver.min.js"></script>
+        <script type="text/javascript" src="js/chart.min.js"></script>
+        <script type="text/javascript" src="js/simulate.min.js"></script>
+    </body>
+</html>

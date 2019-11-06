@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Experimental Design Course</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/style.min.css">
+    </head>
+    <body>
+        <header>
+          <h1><a href="index.html">&#9776;&nbsp;</a>Experimental Design</h1>
+          <h2>Analysis of Variance (ANOVA)</h2>
+        </header>
+        
+        <main>
+          <div class="main">
+            <button class="button" id="openFile">Load data</button>
+            <span id="filename"></span>
+          </div>
+          
+          <div class="main">
+            <div id="tabs">
+              <a href="#!" name="analysis" class="tabs" onclick="selectTab('analysis')">Analysis</a>
+              <a href="#!" name="data"     class="tabs" onclick="selectTab('data')">Data</a>
+              <a href="#!" name="ctrules"  class="tabs" onclick="selectTab('ctrules')">Cornfield-Tukey Rules</a>
+              <a href="#!" name="homogen"  class="tabs" onclick="selectTab('homogen')">Homoscedasticity</a>
+              <a href="#!" name="mtests"   class="tabs" onclick="selectTab('mtests')">Multiple Tests</a>
+              <a href="#!" name="averages" class="tabs" onclick="selectTab('averages')">Averages</a>
+            </div>
+            
+            <div id="tab-contents">
+            
+              <div class="tabcontent" id="analysis">
+              </div>
+
+              <div class="tabcontent" id="data">
+              </div>
+
+              <div class="tabcontent" id="ctrules">
+              </div>
+
+              <div class="tabcontent" id="homogen">
+              </div>
+
+              <div class="tabcontent" id="mtests">
+              </div>
+              
+              <div class="tabcontent" id="averages">
+              </div>
+              
+            </div>
+          </div>
+
+        </main>
+        
+        <footer class="page-footer">
+          © 2019 Copyright amsantos @ fc up pt
+        </footer>
+        
+        <input type="file" id="loadFile" style="display: none;">
+        
+        <script type="text/javascript" src="js/jstat.min.js"></script>
+        <script type="text/javascript" src="js/anova.js"></script>
+        <script type="text/javascript" src="js/main.min.js"></script>
+    </body>
+</html>
