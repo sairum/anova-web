@@ -12,3 +12,9 @@ Initially, the software for the course consisted on a web site written in PHP wh
 While porting *anova-web* I aimed at developing a suit of software with the least amount of dependencies possible. Using *node.js* was my first attempt at porting *anova-web* to a JavaScript environment. I used *grunt* as my task runner of choice, but the incomprehensible large amount of node modules installed soon made me abandon *node* as developing platform and use plain JavaScript. Abandoning *node* implied abandoning *grunt* and all the 'minifications' and linting facilities that come with *node*. *anova-web* uses a plain Makefile to build all its components. If you want to use it just type 
 
 `$ make watch`
+
+This project depends on the presence of *inotifywatch* (a standard tool installed y default in most Linux systems) and Douglas Crockford's *jsmin* (https://www.crockford.com/jsmin.html) for minification of JavaScript files. Other than that, it depends only on one JavaScript library and one CSS Style sheet:
+
+* JStat (https://github.com/jstat/jstat) for probability distributions and related stuff
+* normalize.css (https://necolas.github.io/normalize.css/) to make browsers behave well
+
