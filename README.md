@@ -22,4 +22,22 @@ and edit the files under inside the folder *src/* (this includes css styles and 
 
 ## Installation and usage
 
-The proper way to install **anova-web** is to clone this project and copy all *\*.html* files 
+### Web server installation
+
+The proper way to install **anova-web** is to clone this project and copy all *\*.html* files, together with the *css/*, *examples/*, *js/* and *support/* folders to the document root directory of an http server such as *apache*: 
+
+* css/
+* examples/
+* js/
+* support/
+* index.html
+* anova.html
+* examples.html
+* sampling.html
+* simulate.html
+
+The *src/* directory is not necessary unless you intend to modify or improve the software. All programs reside on the *js/* directory, either minified or not, The *\*.html* files use the minified versions of the JavaScript files found under *js/*.
+
+### Local installation
+
+Another way to run **anova-web** is to uncompress or clone this github repository somewhere in the directory tree of a personal computer. Then, using a GUI, click on *index.html*. This should run the whole bundle just fine (at least it does on a Linux system running KDE Plasma 5). 
