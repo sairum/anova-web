@@ -447,13 +447,23 @@ var ui = (function() {
     
   }
   
+  function separator() {
+    let res = document.getElementById("result").value;
+    console.log(res);
+    let sep = document.getElementById("separator").value;
+    if(sep == ".") res = res.replace(/\,/g , ".");
+    else  res = res.replace(/\./g , ","); 
+    document.getElementById("result").value = res;
+  }    
+  
   return {
     addFactor: addFactor,
     select: select,
     reset: reset,
     generate: generate,
     download: download,
-    label: label
+    label: label,
+    separator: separator
   };
 }());
 
