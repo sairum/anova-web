@@ -445,14 +445,25 @@ var ui = (function() {
     elem = document.getElementById("download");
     elem.disabled = false;
     
+    // Enable decimal separator switching
+    document.getElementById("separator").disabled = false;
+    
   }
   
   function separator() {
     let res = document.getElementById("result").value;
-    console.log(res);
+    //console.log(res);
     let sep = document.getElementById("separator").value;
-    if(sep == ".") res = res.replace(/\,/g , ".");
-    else  res = res.replace(/\./g , ","); 
+    if(sep == ".") {
+      res = res.replace(/\,/g , ".");
+      document.getElementById("separator").value = ",";
+      document.getElementById("separator").innerHTML = "Dec. separator = , (comma)";
+    }  
+    else {
+      res = res.replace(/\./g , ","); 
+      document.getElementById("separator").value = ".";
+      document.getElementById("separator").innerHTML = "Dec. separator = . (dot)";
+    }  
     document.getElementById("result").value = res;
   }    
   
