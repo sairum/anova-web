@@ -6,208 +6,34 @@ var ui = (function() {
       combins = [],
       recoded = [],
       partial = [],
-      effects = [];
-
-  /*
-   * Function used to 'simulate' a tab behaviour for each factor
-   * that is created. By selecting the <a> element corresponding
-   * to a given factor, the area showing the level names is 
-   * displayed. 
-   */
-  
-  function select(name) {
-   // Get all elements with class="tabcontent" and hide them
-    let tabcontent = document.getElementsByClassName("tabcontent");
-    for (let i = 0; i < tabcontent.length; i++) {
-      if ( tabcontent[i].id == name ) tabcontent[i].style.display = "block";
-      else tabcontent[i].style.display = "none";
-    }
-  }
+      effects = []; 
   
   /*
-   * This function changes a factor's label everytime
-   * it is changed in the TAB corresponding to the factor.
-   * It's a callback to 'onchange' event of the corresponding
-   * input element in the TAB
+   * Randomly create effects by sampling deviations
+   * to the overall average using a normal distribution
+   * of "errors". The code used a simulated "coin" throw
+   * to decide if differences existes or not between a
+   * given factor. This is currently commented out
+   * below: all factors are candidates to display
+   * differences, but chance may create so small differences
+   * that they don't show up as significant!
    */
   
-  function label(e) {
-    // Replace spaces by underscores  
-    let name = e.value.trim().replace(/\s/gi, "_");
-    if( ( name.match( /^[0-9a-z-.+_]+$/i ) ) && ( name.length > 0 ) ) {
-      let id   = e.id.split('.');
-      // id[0] has the text 'label'
-      let factor = parseInt(id[1]);
-      let level  = parseInt(id[2]);
-      //console.log(factor, level, name);
-      factors[factor].lcodes[level] = name;
-    }
-  }
   
-  /*
-   * Build a list of all possible combinations of levels 
-   * of factors assuming that all are orthogonal. Nested
-   * factor's levels do not combine with all the levels 
-   * of the factors they'r nested in. This is corrected 
-   * later on by recodeNestedFactors();
-   */
-  
-  function computeLevels( f ) {
-    if ( f == 0 ) combins = [];  
-    if( f < factors.length ) {   
-      if(typeof partial[f] === 'undefined') partial[f] = 0;  
-      for (let i = 0; i < factors[f].levels; i++ ) {
-        partial[f] = i;    
-        computeLevels( f + 1 );
-      }  
-    } else {
-        // Deep copy 'partial', otherwise combins array
-        // will only have the last 'partial' created in
-        // all its slots, because it's copied by reference!
-        let t = [...partial];
-        combins.push(t);
+  function createEffects( average, stdev) {
+    for( let i = 0; i < factors.length; i++) {
+      // let x = jStat.uniform.sample( 0, 1 );
+      factors[i].effects=[];
+      for( let j = 0; j < factors[i].true_levels; j++ ) {
+        //if( x > 0.5 ) {
+          let e = jStat.normal.sample( average, stdev ); 
+          factors[i].effects.push(e - average);
+        //} else factors[i].effects.push(0);     
+      } 
     }    
   }
+ 
   
-  
-  function setupLevels(fnum) {
-    let f = factors[fnum];
-    f.true_levels = f.levels;
-    for ( let i = 0; i < f.nestedin.length; i++ ) {
-      f.true_levels *= factors[f.nestedin[i]].levels;
-    }  
-    // Add an entry to the tab labels 
-    let t = document.getElementById('tabs');
-    let r = document.getElementById('tresults');
-    let b = document.createElement('a'); 
-    b.name = f.name;
-    b.className = 'tabs';
-    b.href = "#!";
-    b.innerHTML = f.name;
-    b.onclick = function () { select(f.name) };
-    t.insertBefore(b, r);
-    // Add also a correspondent content area for the new factor
-    // Label names will be defined here
-    let cts = document.getElementById('tab-contents');
-    let res = document.getElementById('results');
-    let d = document.createElement('div'); 
-    d.className = 'tabcontent';
-    d.id = f.name;
-    
-    //console.log(fnum,combins)
-    
-    let text = '<h3>Labels for levels of Factor ' + f.name + '</h3><table>';
-    for ( let i = 0; i < f.true_levels; i++ ) {
-      text += '<tr><td><b>Level ' + (i+1).toString();
-      // If this is a nested factor compute nesting levels
-      if( f.nested ) {
-        text += '</b> nested in ';
-        let lst = [];
-        for ( let j = 0; j < f.nestedin.length; j++ ) {
-          lst.push( ' Level ' + (combins[i][j]+1).toString() + ' of Factor ' + factors[f.nestedin[j]].name );
-        }
-        text += lst.join(' and ');
-      }    
-      text += '</td><td><input type="text" class="label" value="' + (i+1).toString() + '"';
-      text += ' onchange="ui.label(this)" ';
-      text += ' id="flabel.' + fnum + '.' + i.toString() + '"></td></tr>';
-    }    
-    
-    text += "</table>";
-    d.innerHTML = text;
-    d.style.display = 'none';
-    cts.insertBefore(d, res);      
-  }    
-  
-  /*
-   * Find out if the factors where a factor is nested in (represented 
-   * by 'nst') are present in a term 'trm'. If so, this function returns 
-   * false, meaning that this particular factor will not interact with 
-   * the term 'trm'. Note that the factor is never referenced here but for
-   * the factors where it is nested in ('nst' comes from the selected 
-   * value of the <select id="nestedin"> element in the HTML
-   */
-  
-  function interacts(nst, trm) {
-    let f = nst.split(/[(*)]/).filter(Boolean);
-    let t = trm.split(/[(*)]/).filter(Boolean);
-    for ( let i = 0; i < f.length; i++ ) {
-      if ( t.indexOf(f[i]) != -1 ) return false;
-    }
-    return true;
-  }
-
-  function recodeNestedFactors() {
-    recoded = [...combins];
-    for( let i = 0; i < recoded.length; i++ ) recoded[i] = [...combins[i]];
-          
-    for( let i = 0; i < factors.length; i++ ) {
-      if( factors[i].nested ) {
-        // Recode this factor  
-        //console.log('Recoding factor ' + factors[i].name );
-        let cmb = combins.length;  
-        let cumlevs = [];
-        var codes = [];
-        let nest_list = factors[i].nestedin;
-        let other = 1;
-        let nestlevs=1;
-        //console.log('Nested list     : ', nest_list.join(' '))
-        for( let l = 0; l < i; l++ ) {
-          let lev = factors[l].levels;
-          if( l > 0 ) cumlevs[l]=cumlevs[l-1]*lev;
-          else cumlevs[l] = lev; 
-        } 
-        for( let l = 0; l < factors.length; l++ ) {
-          if( l < i ) {
-            if( nest_list.indexOf(l) != -1 ) nestlevs *= factors[l].levels;
-          } else {
-            if (l != i) other *= factors[l].levels;
-          }    
-        }
-        codes = [...Array(nestlevs*factors[i].levels).keys()];
-        
-        //console.log('Codes     : ', codes)
-        //console.log('Cumulative: ', cumlevs)
-        //console.log('Other     : ', other)
-        //console.log('Nestlevels: ', nestlevs)
-        
-        for( let l = 0; l < i; l++) {
-          if( nest_list.indexOf(l) == -1 ) {
-            //split_repeat_codes( codes, cumlevs[l], factors[l].levels ); 
-            let newcodes = [];
-            let n = factors[l].levels;
-            let blocks = cumlevs[l]/n;
-            let chunks = codes.length/blocks;
-            //console.log("Blocks: ", blocks," Chunks: ", chunks);
-            let start = 0;
-            for( let i = 0; i < blocks; i++ ){
-              let chunk = codes.slice(start, start+chunks);
-              //console.log("Block " + i.toString() + ": " + chunk.join("-"));
-              for( let j = 0; j < n; j++) for(let c of chunk) newcodes.push(c);
-              //console.log("Start ", start," Chunks ", chunks," ", newcodes.join("-"));
-              start += chunks;
-            }        
-            let msg ='Repeating (' + codes.join(' ') + ') x ' + n.toString() + ' times: ';
-            msg += '(' +  newcodes.join(' ') + ')';  
-            //console.log(msg)                 
-            codes = [...newcodes];  
-          }
-        }
-        
-        //console.log(codes)   
-        let newcodes = [];
-        for(let c of codes) {
-          for( let l = 0; l < other; l++) newcodes.push(c);
-        }  
-        
-        //let msg ='Expanding (' + codes.join(' ') + ') x ' + other.toString() + ' times: ';
-        //msg += '(' +  newcodes.join(' ') + ')';  
-        //console.log(msg)   
-        for(let j = 0; j < recoded.length; j++) recoded[j][i] = newcodes[j];
-      }     
-    }    
-  }
-          
   /*
    * Add a factor
    */
@@ -348,35 +174,44 @@ var ui = (function() {
   }
 
   
-  function createEffects( average, stdev) {
-    for( let i = 0; i < factors.length; i++) {
-      //let x = jStat.uniform.sample( 0, 1 );
-      factors[i].effects=[];
-      for( let j = 0; j < factors[i].true_levels; j++ ) {
-        //if( x > 0.5 ) {
-          let e = jStat.normal.sample( average, stdev ); 
-          factors[i].effects.push(e - average);
-        //} else factors[i].effects.push(0);     
-      } 
-    }    
+  /*
+   * Change decimal separator from dot (.) to comma (,) 
+   * and vice-versa. This is important if local language 
+   * is not english. For portuguese (and e.g. French,
+   * Germany, Spain, etc) comma is used as a decimal 
+   * separator. This allows importing the results directly
+   * into excel!
+   */
+  
+  function separator() {
+    let res = document.getElementById("result").value;
+    //console.log(res);
+    let sep = document.getElementById("separator").value;
+    if(sep == ".") {
+      res = res.replace(/\,/g , ".");
+      document.getElementById("separator").value = ",";
+      document.getElementById("separator").innerHTML = "Dec. separator = , (comma)";
+    }  
+    else {
+      res = res.replace(/\./g , ","); 
+      document.getElementById("separator").value = ".";
+      document.getElementById("separator").innerHTML = "Dec. separator = . (dot)";
+    }  
+    document.getElementById("result").value = res;
   }
   
   
-  function reset() { 
-    factors = [];
-    combins = []; 
-    terms = [];
-    partial = [];
-    recoded = [];
-    location.reload();
-  }
+  
+  /*
+   * Initially done without FileSaver.js but it had a wierd 
+   * behaviour. Sometimes, clicking in 'download' fired 
+   * multiple clicks resulting in a sequence of a couple
+   * of file downloads, some of them empty files!
+   */  
   
   function download() { 
     let text = document.getElementById("result").value.trim();  
-//     // Initially done without FileSaver.js but it had a wierd 
-//     // behaviour. Sometimes, clicking in 'download' fired 
-//     // multiple clicks resulting in a sequence of a couple
-//     // of file downloads, some of them empty files!     
+  
 //     let e = document.createElement('a');
 //     e.setAttribute('href','data:text/plain;charset=utf-8,' + encodeURIComponent(text));
 //     e.setAttribute('download', 'result.txt');
@@ -389,21 +224,212 @@ var ui = (function() {
     var blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
     saveAs(blob, 'results.txt');  
   }
+
+  
+  function setupLevels(fnum) {
+    let f = factors[fnum];
+    f.true_levels = f.levels;
+    for ( let i = 0; i < f.nestedin.length; i++ ) {
+      f.true_levels *= factors[f.nestedin[i]].levels;
+    }  
+    // Add an entry to the tab labels 
+    let t = document.getElementById('tabs');
+    let r = document.getElementById('tresults');
+    let b = document.createElement('a'); 
+    b.name = f.name;
+    b.className = 'tabs';
+    b.href = "#!";
+    b.innerHTML = f.name;
+    b.onclick = function () { select(f.name) };
+    t.insertBefore(b, r);
+    // Add also a correspondent content area for the new factor
+    // Label names will be defined here
+    let cts = document.getElementById('tab-contents');
+    let res = document.getElementById('results');
+    let d = document.createElement('div'); 
+    d.className = 'tabcontent';
+    d.id = f.name;
+    
+    //console.log(fnum,combins)
+    
+    let text = '<h3>Labels for levels of Factor ' + f.name + '</h3><table>';
+    for ( let i = 0; i < f.true_levels; i++ ) {
+      text += '<tr><td><b>Level ' + (i+1).toString();
+      // If this is a nested factor compute nesting levels
+      if( f.nested ) {
+        text += '</b> nested in ';
+        let lst = [];
+        for ( let j = 0; j < f.nestedin.length; j++ ) {
+          lst.push( ' Level ' + (combins[i][j]+1).toString() + ' of Factor ' + factors[f.nestedin[j]].name );
+        }
+        text += lst.join(' and ');
+      }    
+      text += '</td><td><input type="text" class="label" value="' + (i+1).toString() + '"';
+      text += ' onchange="ui.label(this)" ';
+      text += ' id="flabel.' + fnum + '.' + i.toString() + '"></td></tr>';
+    }    
+    
+    text += "</table>";
+    d.innerHTML = text;
+    d.style.display = 'none';
+    cts.insertBefore(d, res);      
+  }    
+  
+  
+  function reset() { 
+    factors = [];
+    combins = []; 
+    terms = [];
+    partial = [];
+    recoded = [];
+    location.reload();
+  }
+
+  
+  
+  function recodeNestedFactors() {
+    recoded = [...combins];
+    for( let i = 0; i < recoded.length; i++ ) recoded[i] = [...combins[i]];
+          
+    for( let i = 0; i < factors.length; i++ ) {
+      if( factors[i].nested ) {
+        // Recode this factor  
+        //console.log('Recoding factor ' + factors[i].name );
+        let cmb = combins.length;  
+        let cumlevs = [];
+        var codes = [];
+        let nest_list = factors[i].nestedin;
+        let other = 1;
+        let nestlevs=1;
+        //console.log('Nested list     : ', nest_list.join(' '))
+        for( let l = 0; l < i; l++ ) {
+          let lev = factors[l].levels;
+          if( l > 0 ) cumlevs[l]=cumlevs[l-1]*lev;
+          else cumlevs[l] = lev; 
+        } 
+        for( let l = 0; l < factors.length; l++ ) {
+          if( l < i ) {
+            if( nest_list.indexOf(l) != -1 ) nestlevs *= factors[l].levels;
+          } else {
+            if (l != i) other *= factors[l].levels;
+          }    
+        }
+        codes = [...Array(nestlevs*factors[i].levels).keys()];
+        
+        //console.log('Codes     : ', codes)
+        //console.log('Cumulative: ', cumlevs)
+        //console.log('Other     : ', other)
+        //console.log('Nestlevels: ', nestlevs)
+        
+        for( let l = 0; l < i; l++) {
+          if( nest_list.indexOf(l) == -1 ) {
+            //split_repeat_codes( codes, cumlevs[l], factors[l].levels ); 
+            let newcodes = [];
+            let n = factors[l].levels;
+            let blocks = cumlevs[l]/n;
+            let chunks = codes.length/blocks;
+            //console.log("Blocks: ", blocks," Chunks: ", chunks);
+            let start = 0;
+            for( let i = 0; i < blocks; i++ ){
+              let chunk = codes.slice(start, start+chunks);
+              //console.log("Block " + i.toString() + ": " + chunk.join("-"));
+              for( let j = 0; j < n; j++) for(let c of chunk) newcodes.push(c);
+              //console.log("Start ", start," Chunks ", chunks," ", newcodes.join("-"));
+              start += chunks;
+            }        
+            let msg ='Repeating (' + codes.join(' ') + ') x ' + n.toString() + ' times: ';
+            msg += '(' +  newcodes.join(' ') + ')';  
+            //console.log(msg)                 
+            codes = [...newcodes];  
+          }
+        }
+        
+        //console.log(codes)   
+        let newcodes = [];
+        for(let c of codes) {
+          for( let l = 0; l < other; l++) newcodes.push(c);
+        }  
+        
+        //let msg ='Expanding (' + codes.join(' ') + ') x ' + other.toString() + ' times: ';
+        //msg += '(' +  newcodes.join(' ') + ')';  
+        //console.log(msg)   
+        for(let j = 0; j < recoded.length; j++) recoded[j][i] = newcodes[j];
+      }     
+    }    
+  }
+
+  
+  /*
+   * This function changes a factor's label everytime
+   * it is changed in the TAB corresponding to the factor.
+   * It's a callback to 'onchange' event of the corresponding
+   * input element in the TAB
+   */
+  
+  function label(e) {
+    // Replace spaces by underscores  
+    let name = e.value.trim().replace(/\s/gi, "_");
+    if( ( name.match( /^[0-9a-z-.+_]+$/i ) ) && ( name.length > 0 ) ) {
+      let id   = e.id.split('.');
+      // id[0] has the text 'label'
+      let factor = parseInt(id[1]);
+      let level  = parseInt(id[2]);
+      //console.log(factor, level, name);
+      factors[factor].lcodes[level] = name;
+    }
+  }
+ 
+  
+  /*
+   * Build a list of all possible combinations of levels 
+   * of factors assuming that all are orthogonal. Nested
+   * factor's levels do not combine with all the levels 
+   * of the factors they'r nested in. This is corrected 
+   * later on by recodeNestedFactors();
+   */
+  
+  function computeLevels( f ) {
+    if ( f == 0 ) combins = [];  
+    if( f < factors.length ) {   
+      if(typeof partial[f] === 'undefined') partial[f] = 0;  
+      for (let i = 0; i < factors[f].levels; i++ ) {
+        partial[f] = i;    
+        computeLevels( f + 1 );
+      }  
+    } else {
+        // Deep copy 'partial', otherwise combins array
+        // will only have the last 'partial' created in
+        // all its slots, because it's copied by reference!
+        let t = [...partial];
+        combins.push(t);
+    }    
+  }
+  
+ 
+  
+  /*
+   * Actually generate the data
+   */
+  
   
   function generate() { 
-
-    //recodeNestedFactors();
     
-    // Grab population parameters
+    /*
+     * Grab population parameters from HTML fields
+     */
+    
     let seed = document.getElementById("seed").value,
         average = parseFloat(document.getElementById("average").value),
         stdev = parseFloat(document.getElementById("stdev").value),
         replicates = parseInt(document.getElementById("replicates").value);
     
-    // Jstat does not handle directly RNGs. To use a costum seed we have
-    // to  resort to a user's defined RNG that allows seed setting. Here
-    // we implement this with davidbau's "seedrandom.js" available at
-    // https://github.com/davidbau/seedrandom   
+    /*
+     * Jstat does not handle directly RNGs. To use a costum seed we have
+     * to  resort to a user's defined RNG that allows seed setting. Here
+     * we implement this with davidbau's "seedrandom.js" available at
+     * https://github.com/davidbau/seedrandom   
+     */
+    
     if( seed != "" ) {
       var myRandom = new Math.seedrandom(seed.toString());
       jStat.setRandom(myRandom);
@@ -413,7 +439,10 @@ var ui = (function() {
             
     let line = [], text = "", effect;
     
-    // Build the header fo the data
+    /*
+     * Build the header for the data
+     */
+    
     for(let i = 0; i < factors.length; i++) {
       let nm = factors[i].orig_name;
       if(factors[i].ftype == 'random') nm += '*';
@@ -421,7 +450,10 @@ var ui = (function() {
     }  
     text = line.join(' ') + ' DATA\n';
     
-    // Populate the data
+    /*
+     * Populate the data array
+     */
+    
     for(let i = 0; i < recoded.length; i++) {
       line = [];
       effect = 0;
@@ -440,32 +472,58 @@ var ui = (function() {
     let elem = document.getElementById("result");  
     elem.innerHTML = text;
     
-    // Since the data exist, let's createa button
-    // to download it
+    /*
+     * Since the data exists, let's create a button
+     * to download it
+     */
+    
     elem = document.getElementById("download");
     elem.disabled = false;
     
-    // Enable decimal separator switching
+    /*
+     * Enable decimal separator switching
+     */
+    
     document.getElementById("separator").disabled = false;
     
   }
+
   
-  function separator() {
-    let res = document.getElementById("result").value;
-    //console.log(res);
-    let sep = document.getElementById("separator").value;
-    if(sep == ".") {
-      res = res.replace(/\,/g , ".");
-      document.getElementById("separator").value = ",";
-      document.getElementById("separator").innerHTML = "Dec. separator = , (comma)";
-    }  
-    else {
-      res = res.replace(/\./g , ","); 
-      document.getElementById("separator").value = ".";
-      document.getElementById("separator").innerHTML = "Dec. separator = . (dot)";
-    }  
-    document.getElementById("result").value = res;
-  }    
+  /*
+   * Find out if the factors where a factor is nested in (represented 
+   * by 'nst') are present in a term 'trm'. If so, this function returns 
+   * false, meaning that this particular factor will not interact with 
+   * the term 'trm'. Note that the factor is never referenced here but for
+   * the factors where it is nested in ('nst' comes from the selected 
+   * value of the <select id="nestedin"> element in the HTML
+   */
+  
+  function interacts(nst, trm) {
+    let f = nst.split(/[(*)]/).filter(Boolean);
+    let t = trm.split(/[(*)]/).filter(Boolean);
+    for ( let i = 0; i < f.length; i++ ) {
+      if ( t.indexOf(f[i]) != -1 ) return false;
+    }
+    return true;
+  }
+
+  
+  /*
+   * Function used to 'simulate' a tab behaviour for each factor
+   * that is created. By selecting the <a> element corresponding
+   * to a given factor, the area showing the level names is 
+   * displayed. 
+   */
+  
+  function select(name) {
+   // Get all elements with class="tabcontent" and hide them
+    let tabcontent = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabcontent.length; i++) {
+      if ( tabcontent[i].id == name ) tabcontent[i].style.display = "block";
+      else tabcontent[i].style.display = "none";
+    }
+  }
+  
   
   return {
     addFactor: addFactor,
@@ -494,5 +552,4 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById("stdev").addEventListener("change", function () { 
     chart.setStdev(this.value) 
   });
-}); 
-  
+});  

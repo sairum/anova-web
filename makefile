@@ -7,7 +7,7 @@ cssfiles = src/css/style.scss
 
 anova = src/anova/src/*.js
 
-simulate = src/simulate/simulate.js
+simulate = src/simulate/src/*.js
 
 sample = src/sample/src/*.js
 
@@ -25,7 +25,9 @@ anovajs: $(anova)
 	
 simulatejs: $(simulate) 
 	@echo Building simulate.js
-	$(CAT) src/simulate/simulate.js > js/simulate.js
+	$(CAT) src/simulate/simulate_header.js > js/simulate.js
+	$(CAT) $^ >> js/simulate.js
+	$(CAT) src/simulate/simulate_api.js >> js/simulate.js 
 	
 samplejs: $(sample)
 	@echo Building sample.js
@@ -41,9 +43,10 @@ watch:
 	@echo Watching for changes...
 	@while true; do \
 		inotifywait -qr -e close -e create -e delete \
-		src/anova/*.js src/anova/src/*.js src/simulate/*.js \
-		src/sample/*.js src/sample/src/*.js src/chart/*.js \
-		src/css/*.scss; \
+		src/anova/*.js src/anova/src/*.js \
+		src/simulate/*.js src/simulate/src/*.js \
+		src/sample/*.js src/sample/src/*.js \
+		src/chart/*.js src/css/*.scss; \
 		make optimize; \
 	done
 	
