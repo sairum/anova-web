@@ -111,7 +111,7 @@
     elem = document.getElementById("mtest_results"); 
     
     /*
-     * If the seklection is not 'None' (index 0)...
+     * If the selection is not 'None' (index 0)...
      */
     
     if( testName != 'none' ) {
