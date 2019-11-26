@@ -1,4 +1,4 @@
-.PHONY: css anovajs mainjs simulatejs chartjs clean watch optimize
+.PHONY: css anovajs simulatejs samplejs chartjs clean watch optimize
 
 #CAT = @cat
 CAT =	@sed '/\#DEBUG/,/!DEBUG/d' 
@@ -7,29 +7,31 @@ cssfiles = src/css/style.scss
 
 anova = src/anova/src/*.js
 
-main = src/anova/main.js
-
 simulate = src/simulate/simulate.js
+
+sample = src/sample/src/*.js
 
 chart = src/chart/chart.js
 
 css: $(cssfiles)
 	@echo Built style.css
 	@sassc src/css/style.scss css/style.css
-
+	
 anovajs: $(anova) 
 	@echo Building anova.js
 	$(CAT) src/anova/anova_header.js > js/anova.js 
 	$(CAT) $^ >> js/anova.js
 	$(CAT) src/anova/anova_api.js >> js/anova.js
-
-mainjs: $(main) 
-	@echo Building main.js
-	$(CAT) src/anova/main.js > js/main.js
 	
 simulatejs: $(simulate) 
 	@echo Building simulate.js
 	$(CAT) src/simulate/simulate.js > js/simulate.js
+	
+samplejs: $(sample)
+	@echo Building sample.js
+	$(CAT) src/sample/sample_header.js > js/sample.js
+	$(CAT) $^ >> js/sample.js
+	$(CAT) src/sample/sample_api.js >> js/sample.js
 	
 chartjs: $(chart) 
 	@echo Building chart.js
@@ -38,18 +40,21 @@ chartjs: $(chart)
 watch:
 	@echo Watching for changes...
 	@while true; do \
-		inotifywait -qr -e close -e create -e delete  src/anova/*.js src/anova/src/*.js src/simulate/*.js src/chart/*.js; \
+		inotifywait -qr -e close -e create -e delete \
+		src/anova/*.js src/anova/src/*.js src/simulate/*.js \
+		src/sample/*.js src/sample/src/*.js src/chart/*.js \
+		src/css/*.scss; \
 		make optimize; \
 	done
-
-optimize: anovajs mainjs css simulatejs chartjs
+	
+optimize: anovajs css simulatejs chartjs samplejs 
+	@echo Optimizing...
 	@jsmin < js/anova.js > js/anova.min.js 
-	@jsmin < js/main.js > js/main.min.js 
-	@jsmin < js/simulate.js > js/simulate.min.js 
+	@jsmin < js/simulate.js > js/simulate.min.js
+	@jsmin < js/sample.js > js/sample.min.js
 	@jsmin < js/chart.js > js/chart.min.js
 	@jsmin < css/style.css > css/style.min.css
-#	#@yuicompressor assets/all.js -o assets/all.js
-#	@echo Optimized
-
+#@yuicompressor assets/all.js -o assets/all.js
+	
 clean:
-	@rm -f js/anova*.js js/main*.js js/simulate*.js js/chart*.js 
+	@rm -f js/anova*.js js/simulate*.js js/sample*.js js/chart*.js 
