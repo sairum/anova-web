@@ -5,7 +5,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="css/normalize.min.css">
-        <link rel="stylesheet" href="css/style.min.css">
+        <link rel="stylesheet" href="css/style.css">
     </head>
     <body>
         <header>
@@ -14,23 +14,50 @@
         </header>
         
         <main>
-         
-          <div class="main">
-            <div id="tabs">
-              <a href="#!" name="normal" class="tabs" onclick="selectTab('normal')">Normal distribution</a>
-              <a href="#!" name="errors" class="tabs" onclick="selectTab('errors')">Errors</a>
+          <button class="accordion">Sampling the normal distribution</button>
+          <div class="panel">
+            <div class="ct" id="normpars">
+            <h3>Population parameters</h3>
+            <table>
+                <tr>
+                <td>&mu; (average)</td><td><input type="number" id="normavg" value="8.0"></td>
+                </tr>
+                <tr>
+                <td>&sigma; (stdev)</td><td><input type="number" id="normstd" min="0.1" value="1.5" step="0.1" onchange="sample.setVar()"></td>
+                </tr>
+                <tr>
+                <td>&sigma;&sup2; (variance)</td><td><input type="number" id="normvar" value="2.25" disabled></td>
+                </tr>
+                <tr><td></td><td></td></tr>
+                <tr>
+                <td><em>n</em> (replicates)</td><td><input type="number" id="normn" min="1" value="10" step="1"></td>
+                </tr>
+                <tr>
+                <td>Precision</td><td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
+                </tr>
+                <tr>
+                <td>Dec. separator</td><td><button class="button" id="normdecsep" onclick="sample.switchDecSep('normdecsep','normres')" value="," disabled>, (comma)</button></td>
+                </tr>
+                <tr>
+                <td></td><td><button class="button" onclick="sample.normGenerate()">Generate</button></td>
+                </tr>
+                <tr>
+                <td></td><td><button class="button" onclick="sample.normReset()">Reset</button></td>
+                </tr>
+                
+            </table>
             </div>
-            
-            <div id="tab-contents">
-            
-              <div class="tabcontent" id="normal">
-              Hi
-              </div>
-              <div class="tabcontent" id="errors">
-              Ho
-              </div>
+            <div class="ct" id="norm" style="display: none;">
+
+            </div>
+            <div class="ct" id="normstats" style="display: none;">
             </div>
           </div>
+
+         <button class="accordion">Multiple samples and the central limit theorem</button>
+         <div class="panel">
+           <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+         </div>
 
         </main>
         
@@ -38,10 +65,10 @@
           © 2019 Copyright amsantos @ fc up pt
         </footer>
         
-        <input type="file" id="loadFile" style="display: none;">
-        
         <script type="text/javascript" src="js/jstat.min.js"></script>
-        <script type="text/javascript" src="js/anova.js"></script>
-        <script type="text/javascript" src="js/main.min.js"></script>
+        <script type="text/javascript" src="js/seedrandom.min.js"></script>
+        <script type="text/javascript" src="js/FileSaver.min.js"></script>
+<!--         <script type="text/javascript" src="js/chart.min.js"></script> -->
+        <script type="text/javascript" src="js/sample.js"></script>        
     </body>
 </html>
