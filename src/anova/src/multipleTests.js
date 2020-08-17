@@ -169,13 +169,10 @@
           if( studentized.indexOf(testName) != -1 ) {
             text += studentizedComparisons(testName, fcode, dferr, mserr, mcomps[i].averages[a] );  
           }  
-            
         }    
-        
-        
-        
       }
-      
+
+      if( text == "" ) text="<h3>No multiple tests available!</h3>Are you sure there are significant differences in fixed factors?";
       elem.innerHTML = text;
       elem.style.display = 'inline-block';
       

@@ -21,7 +21,7 @@
      * Now, go along all terms...
      */
     
-    for(let i = 0; i < tl; i++) {
+    for( let i = 0; i < tl; i++ ) {
       
       /*
        * Extract the 'codes' for the current term. These are in the form 
@@ -44,8 +44,8 @@
       
       let nm = [];
       
-      for(let j = 0, l = c.length; j < l; j++ ) {
-        if(c[j] == 1) nm.push(factors[j].name);
+      for( let j = 0, l = c.length; j < l; j++ ) {
+        if( c[j] == 1 ) nm.push( factors[j].name );
       }
       
       terms[i].name = nm.join('*');
@@ -133,7 +133,7 @@
        * asymmetric and cannot be completed!
        */
       
-      for(let j = 0, nl = ( terms[i].n.length - 1 ); j < nl; j++) {
+      for( let j = 0, nl = ( terms[i].n.length - 1 ); j < nl; j++ ) {
         if( terms[i].n[j] != terms[i].n[j+1] ) {
           alert("Asymmetrical data set. Analysis stopped!"); 
           return false;
@@ -145,7 +145,7 @@
        * combination of code levels.
        */
       
-      for(let j = 0, nl = terms[i].nlevels; j < nl; j++) {
+      for( let j = 0, nl = terms[i].nlevels; j < nl; j++ ) {
         terms[i].average[j] = terms[i].sumx[j]/terms[i].n[j];
         terms[i].ss += terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/terms[i].n[j];
       }
@@ -205,12 +205,12 @@
          */
         
         let tSS = total.ss;
-        for(let j = 0; j < i; j++) {
+        for( let j = 0; j < i; j++ ) {
           let cj = terms[j].codes, cjl = c.length;
           let included = true;
-          for(let k = 0; k < cjl; k++) 
-            if((cj[k] == 1) && (c[k] == 0)) included = false;
-          if(included) tSS -= terms[j].SS;
+          for( let k = 0; k < cjl; k++ ) 
+            if( (cj[k] == 1) && (c[k] == 0) ) included = false;
+          if( included ) tSS -= terms[j].SS;
         } 
         terms[i].SS = tSS - terms[i].ss;
       }   

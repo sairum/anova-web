@@ -40,7 +40,7 @@
   /* similar combination of codes are accummulated into two quantities for */
   /* their corresponding partial: 'sumx' for the sum of observations, and  */
   /* 'sumx2', for the sum of squared observations, and 'n' for the number  */
-  /* observations of the partial. For the case above, the corresponding    */
+  /* observations of the partial. For the example above, the corresponding */
   /* list of partials would be                                             */
   /*                                                                       */
   /* {[0, 0, 0], 44, 970, 2},                                              */
@@ -234,6 +234,11 @@
     
     homogeneityTests();
     
-    return true;
+    /*
+     * Compute the terms of the linear model
+     */
+    
+    buildTerms(); 
+
   }
   

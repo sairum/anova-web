@@ -56,8 +56,10 @@
         let header = true;
         let text   = reader.result;
         let lines  = text.split('\n');
-        for(let i = 0, len = lines.length; i < len; i++) {
+        for( let i = 0, len = lines.length; i < len; i++ ) {
+            
           // Trim the line 
+            
           let li = lines[i].trim();
           
           /*
@@ -65,7 +67,7 @@
            * it is an empty line. If so, ignore it!
            */
           
-          if( (li[0]!=='#') && (li.length !== 0) ) {
+          if( ( li[0]!=='#' ) && ( li.length !== 0 ) ) {
               
             /*
              * Split the line using spaces or tabs
@@ -84,7 +86,7 @@
               /*
                * Number of factors is equal to the number of columns
                * in the data file minus the data column which is usually
-               * named 'DATA'
+               * named 'DATA' and should be the last column
                */
               
               nfactors = li.length - 1;
@@ -94,28 +96,31 @@
                 let name = li[j];
                 
                 /*
-                 * Factor names ending in '*' are of type 'random',
-                 * otherwise they are of type 'fixed'
+                 * Factor names ending in '*' are of type 'RANDOM',
+                 * otherwise they are of type 'FIXED'
                  */
                 
-                if(name.endsWith("*")) {
+                if( name.endsWith( "*" ) ) {
                   factors[j].type = RANDOM;
-                  name = name.slice(0,name.length-1);
+                  name = name.slice( 0, name.length-1 );
                 } else {
                   factors[j].type = FIXED;
                 }
                 factors[j].name = name;
+                factors[j].orig_name = name;
                 factors[j].nlevels = 0;
                 factors[j].levels = [];
-                factors[j].nestedin = new Array(nfactors).fill(0);
+                factors[j].nestedin = new Array( nfactors ).fill(0);
                 factors[j].depth = 0;
+                
                 /*
                  * Compute the subscript for the current factor
-                 * stating in 'i' (the first factor)
-                 * This will be needed in CT Rules
+                 * starting in 'i' (the first factor) which has
+                 * ASCII charcode 105. This will be needed in 
+                 * the CT Rules procedure later on...
                  */
                 
-                factors[j].subscript = String.fromCharCode(j+105);
+                factors[j].subscript = String.fromCharCode( j + 105 );
               }   
               
               /*
@@ -170,22 +175,22 @@
                  * increase 'factors[].nlevels' accordingly
                  */
                 
-                let p = factors[j].levels.indexOf(li[j]);
+                let p = factors[j].levels.indexOf( li[j] );
                 
                 /*
                  * indexOf return -1 if the argument is not in the array
                  */
                 
                 if(p == -1 ) {
-                  factors[j].levels.push(li[j]);
-                  factors[j].nlevels++; 
+                  factors[j].levels.push( li[j] );
+                  factors[j].nlevels++;   
                 }
                 
                 /*
                  * Add this level to data's new observation 'd'
                  */
                 
-                d.levels.push(li[j]);
+                d.levels.push( li[j] );
               }
               
               /*
@@ -194,7 +199,7 @@
                * because array indexes start on 0!
                */
               
-              let n = +li[nfactors].replace(",", ".");
+              let n = +li[nfactors].replace( ",", "." );
               let a = Number.parseFloat(n);
               if(Number.isNaN(a)) {
                 let ln = i + 1;
@@ -224,7 +229,10 @@
           }  
         }
         
-        // Enable all anova tabs as a file was successfully read
+        /*
+         * Enable all anova tabs as a file was successfully read
+         */
+        
         let elem = document.getElementsByClassName("tabcontent");
         for ( let i = 0, len = elem.length; i < len; i++ ) elem[i].innerHTML="";
         
@@ -235,11 +243,10 @@
         displayData();
         
         /*
-         * Start the ANOVA by computing 'partials' and then
-         * computing the 'terms' of the analysis
+         * Start the ANOVA by computing 'partials' 
          */
         
-        if( computePartials() ) buildTerms(); 
+        computePartials(); 
         
       }
       

@@ -43,7 +43,7 @@
     text += '<div class="ct"><p>Rejection criteria (&alpha;):</p>'+
              '<p><input type="number" id="anova_alpha" value="' +
              rejection_level.toString() + 
-             '" min="0.00000" max="0.999999" step="0.01" onchange="anova.setAlpha()"/></p>' +
+             '" min="0.00000" max="0.999999" step="0.1" onchange="anova.setAlpha()"/></p>' +
              '</div>';
 
     /*

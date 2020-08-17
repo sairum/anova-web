@@ -1,4 +1,17 @@
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            transformData                              */
+  /*                                                                       */
+  /* This function applies several possible transformations to data values */
+  /* but keeps original data for any possible reset. Transformations are   */
+  /* applied sequentially, thus "memorizing" previous transformations.     */
+  /* Hence, transforming data using the fourth root is equivalent to apply */
+  /* the square root transformation twice.                                 */
+  /*                                                                       */
+  /*************************************************************************/ 
+
   function transformData() {
+      
     let t = document.getElementsByName("transf");
     let multc = parseFloat(document.getElementById("multc").value);
     let divc  = parseFloat(document.getElementById("divc").value);
@@ -58,6 +71,13 @@
     let h = document.getElementsByClassName("tabcontent");
     for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
     
+    for( let i = 0; i < factors.length; i++ ) {
+      factors[i].name = factors[i].orig_name;
+      factors[i].nlevels = factors[i].levels.length;
+      factors[i].nestedin = new Array( nfactors ).fill(0);
+      factors[i].depth = 0;
+    }
+    
     partials = [];
     terms    = [];
     corrected_df = 0;
@@ -67,12 +87,11 @@
     nesting = false;
     
     displayData();
-        
+    
     /*
-     * Start the ANOVA by computing 'partials' and then
-     * computing the 'terms' of the analysis
+     * Restart the ANOVA by computing 'partials' 
      */
-        
-    if( computePartials() ) buildTerms(); 
+    
+    computePartials(); 
 
   }

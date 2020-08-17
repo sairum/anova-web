@@ -40,20 +40,23 @@ var anova = (function () {
  
   // 'factors' is an array with information for each factor
   //
-  // name     : the name of the factor, initially read from the  
-  //            header of the data file
-  // type     : 0 or 1 ("random" or "fixed")
-  // nlevels  : number of levels
-  // levels   : array with the original names of the levels. the
-  //            codes of the levels are the indexes of this array
-  // nestedin : array with size = 'nfactors' filled with 0s, and 
-  //            with 1s on cells corresponding to a factor that
-  //            nests this one: [0,0,1,0,0] means that this factor
-  //            is nested in factor 2.
-  // depth    : if factor is nested in others, this tells how 
-  //            deep nesting is. If not nested 'depth' is 0; 
-  //            a factor nested in the interaction of two other
-  //            factors has 'depth' 2.
+  // name        : the name of the factor, initially read from the  
+  //               header of the data file
+  // orig_name   : the original name of the factor; factor names maybe 
+  //               changed due to hierarchies (nested factors); a reset
+  //               should put everything as in the begining 
+  // type        : 0 or 1 ("random" or "fixed")
+  // nlevels     : number of levels
+  // levels      : array with the original names of the levels. the
+  //               codes of the levels are the indexes of this array
+  // nestedin    : array with size = 'nfactors' filled with 0s, and 
+  //               with 1s on cells corresponding to a factor that
+  //               nests this one: [0,0,1,0,0] means that this factor
+  //               is nested in factor 2.
+  // depth       : if factor is nested in others, this tells how 
+  //               deep nesting is. If not nested 'depth' is 0; 
+  //               a factor nested in the interaction of two other
+  //               factors has 'depth' 2.
 
   var factors = []; 
   

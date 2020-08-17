@@ -47,11 +47,12 @@ function selectTab(name) {
 
 document.addEventListener('DOMContentLoaded', function () {
     
+    
+    //#DEBUG 
+
     /*
      * Append 'debug' tab and corresponding <a href> if in Debug Mode
      */
-    
-    //#DEBUG 
     
     let t = document.getElementById('tab-contents');
     let d = document.createElement('div');

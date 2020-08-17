@@ -120,7 +120,7 @@
        * 'factors[]' order 
        */
       
-      terms.sort(function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
+      terms.sort( function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
       
       /*
        * Recompute MSs and dfs for all terms. Do not do this for the "Error" and 
@@ -158,7 +158,7 @@
        */
       
       correctForNesting();
-
+      
       //#DEBUG   
       displayFactors(); 
       //!DEBUG     
@@ -187,7 +187,7 @@
       buildMultipleComparisons();
       
       /*
-       * Display the tab with multiple comparisons if any available
+       * Display the tab with multiple comparisons if any is selected
        */
       
       displayMultipleComparisons();
@@ -196,7 +196,7 @@
        * Finally display the ANOVA table
        */
       
-      displayANOVA(); 
+      displayANOVA();
     }  
   }
 

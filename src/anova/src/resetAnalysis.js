@@ -30,7 +30,6 @@
     data     = [];
     partials = [];
     terms    = [];
-    mcomps   = [];
     corrected_df = 0;
     replicates = 0;
     total = {df: 0, ss: 0};

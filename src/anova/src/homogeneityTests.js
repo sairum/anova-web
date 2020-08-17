@@ -31,10 +31,10 @@
      * by the sum of all variances. This is the Cochran's test
      */
     
-    for(let i = 0; i < k; i++ ) {
-      let v = partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n;
-      v = v/(partials[i].n-1);
-      if ( v > maxvar) maxvar = v;
+    for( let i = 0; i < k; i++ ) {
+      let v = partials[i].sumx2 - Math.pow( partials[i].sumx, 2 )/partials[i].n;
+      v = v/( partials[i].n - 1 );
+      if ( v > maxvar ) maxvar = v;
       sumvar += v;       
     }
     
@@ -73,7 +73,7 @@
     
     /*
      * Because of the abovemention problems, and the fact that there is not 
-     * a tru CDF function for Cochran's C, we also provide critical values
+     * a true CDF function for Cochran's C, we also provide critical values
      * for alpha = 0.1, 0.05 and 0.01 using the formula
      * 
      * C[alpha, df, K] = 1/[1 + (k-1)/(probF(1 - alpha/k, df, df*(k-1)))]
@@ -135,12 +135,7 @@
       
     let d = document.getElementById('homogen');
     
-
     d.innerHTML = '<div class="ct">Cochran\'s test' + testCochran() + "</div>";
-    
-    
-
-    
     
     //let html = "<h2>Cochran's Test</h2>";
     
