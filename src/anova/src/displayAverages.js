@@ -46,8 +46,8 @@
         table += '<td>' + n.toString() + '</td>';
         
         let std = 0, variance = 0;
-        if( n > 1 ) std = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
-        variance = Math.pow(std,2);
+        if( n > 1 ) variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
+        std = Math.sqrt(variance,2);
         
         table += '<td>' + std.toString() + '</td>';
         table += '<td>' + variance.toString() + '</td>';

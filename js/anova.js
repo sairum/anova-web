@@ -162,15 +162,9 @@ var anova = (function () {
     
     let c = document.getElementById('ctrules'); 
     
-    //#DEBUG
-    let d = document.getElementById("debug"); 
-    //!DEBUG
     
     let table = '<div class="ct"><table><thead>';
     
-    //#DEBUG
-    let dbgtable = '<h5>Cornfield-Tukey Rules</h5>' + table;
-    //!DEBUG
     
     /*
      * Build the header of the table. First column for the ANOVA term name
@@ -178,9 +172,6 @@ var anova = (function () {
     
     table += '<tr><th>Term</th>';
     
-    //#DEBUG
-    dbgtable += '<tr><th>Term</th>';
-    //!DEBUG
     
     /*
      * Now add one column for each subscript associated with each factor,
@@ -188,11 +179,6 @@ var anova = (function () {
      * and its display is just for debugging purposes
      */
     
-    //#DEBUG
-    for ( let i = 0, len = factors.length + 1; i < len; i++) {
-      dbgtable += '<th>' + String.fromCharCode(i+105) + '</th>';  
-    }  
-    //!DEBUG
     
     /*
      * We should build a table with as many columns as ANOVA terms (including
@@ -200,11 +186,6 @@ var anova = (function () {
      * by each term. Again, displaying this is only necessary while debugging 
      */
     
-    //#DEBUG
-    for ( let i = terms.length - 2; i >= 0; i--) {
-      dbgtable += '<th>' + terms[i].name + '</th>';  
-    }
-    //!DEBUG
     
     /*
      * Finally a column to display which variance components are estimated
@@ -213,9 +194,6 @@ var anova = (function () {
     
     table += '<th>Estimates</th></tr></thead><tbody>';
     
-    //#DEBUG
-    dbgtable += '<th>Estimates</th></tr></thead><tbody>';
-    //!DEBUG
     
     /*
      * Compute rows
@@ -224,16 +202,6 @@ var anova = (function () {
     for(let i = 0, len = terms.length - 1; i < len; i++ ) {
       table += '<tr><td>' + terms[i].name + '</td>';
       
-      //#DEBUG
-      dbgtable += '<tr><td>' + terms[i].name + '</td>';
-      
-      for ( let j = 0, len = factors.length +1; j < len; j++) {
-        dbgtable += '<td>' + terms[i].ct_codes[j].toString() + '</td>';
-      }    
-      for ( let j = terms.length - 2; j >= 0; j--) {
-        dbgtable += '<td>' + terms[i].varcomp[j].toString() + '</td>';  
-      }
-      //!DEBUG
       let est = [], name = "";
       for ( let j = terms.length - 2; j >= 0; j--) {
         if(terms[i].varcomp[j] > 0 ) {
@@ -245,22 +213,13 @@ var anova = (function () {
       }
       table += '<td>' + est.join(' + ') + '</td></tr>';
       
-      //#DEBUG
-      dbgtable += '<td>' + est.join(' + ') + '</td></tr>';
-      //!DEBUG
     }
     
     table += '</tbody></table></div>';
     
-    //#DEBUG
-    dbgtable += '</tbody></table></div>';
-    //!DEBUG
     
     c.innerHTML = table;
     
-    //#DEBUG
-    d.innerHTML += dbgtable;
-    //!DEBUG
   } 
 
   
@@ -528,42 +487,6 @@ var anova = (function () {
   /*                                                                       */
   /*************************************************************************/ 
   
-  //#DEBUG
-  function displayFactors() {
-    
-    // Get the 'anova_debug' <div> to append data
-    
-    let d = document.getElementById('debug'); 
-    
-    // Create the table as a whole text bunch of HTML to avoid
-    // multiple calls to the DOM structure
-  
-    let table = '<h5>Factors</h5><div><table>';
-    
-    // Append the header
-    
-    table += '<thead><tr><th>Name</th><th>Subs.</th><th>Type</th><th>Levels</th><th>Levels\' Codes</th><th>Nested in</th></tr></thead><tbody>';
-    
-    // Append rows
-    
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<tr>';
-      table += '<td>' + factors[i].name + '</td>';
-      table += '<td>' + factors[i].subscript + '</td>';
-      table += '<td>' + factors[i].type + '</td>';
-      table += '<td>' + factors[i].nlevels.toString() + '</td>';
-      table += '<td>' + factors[i].levels.toString(); + '</td>';
-      table += '<td>' + factors[i].nestedin.toString(); + '</td>';
-      table += '</tr>';
-    }
-    
-    table += '</tbody></table><div>';
-    
-    d.innerHTML += table;
-    //let j = JSON.stringify(factors);
-    //console.table(JSON.parse(j))
-  }
-  //!DEBUG
 
   /*************************************************************************/
   /*                                                                       */
@@ -1040,44 +963,6 @@ var anova = (function () {
   /*                                                                       */     
   /*************************************************************************/ 
   
-  //#DEBUG
-  function displayPartials() {
-
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>List of Partials</h5><div><table><thead>';
-    
-    table += '<tr>';
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<th>' + factors[i].name + '</th>';
-    }
-    
-    table += '<th>n orig.</th><th>n</th><th>sumx</th><th>sumx2</th><th>ss</th></thead><tbody>';
-    
-    for(let i = 0, len = partials.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, l = partials[i].codes.length; j < l; j++ ) {
-        let c = partials[i].codes[j];
-        let name = factors[j].levels[c];
-        table += '<td>' + name + '</td>';
-      }
-      table += '<td>' + partials[i].n_orig.toString() + '</td>';
-      table += '<td>' + partials[i].n.toString() + '</td>';
-      table += '<td>' + partials[i].sumx.toString() + '</td>';
-      table += '<td>' + partials[i].sumx2.toString() + '</td>';
-      table += '<td>' + partials[i].ss.toString() + '</td>';
-      table += '</tr>';
-    }
-
-    table += "</tbody></table></div>";
-
-    table += '<h5>Replicates</h5><div class="contentor"><table><thead>';
-    table += '<tr><td>Replicates</td></tr></thead><tbody><tr><td>';
-    table += replicates + '</td></tr></tnody></table></div>';
-    
-    d.innerHTML += table;
-  }
-  //!DEBUG
  
   /*************************************************************************/
   /*                                                                       */
@@ -1278,8 +1163,8 @@ var anova = (function () {
         table += '<td>' + n.toString() + '</td>';
         
         let std = 0, variance = 0;
-        if( n > 1 ) std = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
-        variance = Math.pow(std,2);
+        if( n > 1 ) variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
+        std = Math.sqrt(variance,2);
         
         table += '<td>' + std.toString() + '</td>';
         table += '<td>' + variance.toString() + '</td>';
@@ -1563,9 +1448,6 @@ var anova = (function () {
         let elem = document.getElementsByClassName("tabcontent");
         for ( let i = 0, len = elem.length; i < len; i++ ) elem[i].innerHTML="";
         
-        //#DEBUG - Display Table of Factors 
-        displayFactors();
-        //!DEBUG
         
         displayData();
         
@@ -1918,10 +1800,6 @@ var anova = (function () {
       current++;  
     }
     
-    //#DEBUG    
-    //display.Factors( factors );
-    //display.Terms("Terms before correcting for nesting", terms);
-    //!DEBUG
     
     correctTermNames();
 
@@ -2163,9 +2041,6 @@ var anova = (function () {
     
     replicates = partials[0].n;
     
-    //#DEBUG    
-    displayPartials();
-    //!DEBUG    
     
     /*
      * It's time to compute homogeneity tests for this data set
@@ -2195,53 +2070,6 @@ var anova = (function () {
   /*                                                                       */
   /*************************************************************************/   
   
-  //#DEBUG
-  function displayTerms( title = '') {
-  
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>' + title + '</h5><table>';
-    
-    // Build the table header
-    
-    table += '<thead><tr><th>i</th><th>Order</th><th>Name</th><th>Codes</th><th>levels</th>'
-    table += '<th>combins</th><th>df</th><th>level codes</th><th>n</th>';
-    table += '<th>averages</th><th>sumx</th><th>sumx2</th><th>ss</th><th>SS</th>'
-    table += '<th>MS</th><th>F</th><th>Against</th></tr></thead><tbody>'; 
-    
-    let a = [];
-    
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      table += '<tr><td>' + i.toString() + '</td>';
-      table += '<td>'+terms[i].order.toString()+'</td>';
-      table += '<td>'+terms[i].name+'</td>';
-      table += '<td>'+terms[i].codes.toString();+'</td>';
-      table += '<td>'+terms[i].nlevels.toString()+'</td>';
-      table += '<td>'+terms[i].combins.toString()+'</td>';
-      table += '<td>'+terms[i].df.toString()+'</td>';
-      a = terms[i].levels.slice();
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].n.slice();
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].average.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].sumx.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].sumx2.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      table += '<td>'+terms[i].ss.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].SS.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].MS.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].F.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].against+'</td>';
-    }
-    table +='</tbody></table>';
-    d.innerHTML += table;
-  }
-  //!DEBUG
   /*************************************************************************/
   /*                                                                       */
   /*                            displayData                                */
@@ -2536,15 +2364,117 @@ var anova = (function () {
                
     terms.push(tt);    
     
-//#DEBUG    
-    //console.log("Table of Terms")
-    //console.table(terms)
-//!DEBUG
     
     return true;
   }   
 
+  function testBartlett() {
+    /*
+     * Compute Bartlett's test which is a ratio between the largest sample   
+     * 
+     *           (N-k)*ln(s_p²) - Sum[(n_i-1)*ln(s_i²)]
+     * X² =     ---------------------------------------
+     *          1 + 1/(3*(k-1))*Sum[1/(n_i-1) - 1/(N-k)]
+     * 
+     * N    = Sum[n_i]
+     * s_p² = Sum[(n_i-1)*s_i²]/(N-k)
+     * k    = number of means being compared
+     * n_i  = size for mean i (sample sizes should be similar: balanced analysis)
+     * s_i² = variance of sample i
+     * 
+     * An easier way is explained in https://stattrek.com/online-calculator/bartletts-test.aspx
+     * 
+     *         A - B
+     * X² = -----------
+     *      1 + (C * D)
+     * 
+     * with 
+     * 
+     * A = (N-k)*ln(s_p²)
+     * B = Sum[(n_i-1)*ln(s_i²)]
+     * C = 1/(3*(k-1))
+     * D = Sum[1/(n_i-1) - 1/(N-k)]
+     * 
+     * 
+     */
 
+    /*
+     * k denotes the total number of averages involved in the test,
+     * determind by all possible combinations between factor levels
+     */
+    
+    let k = partials.length;
+    
+    /*
+     * Compute N, the sum of all sample sizes. Since the present anova-web only
+     * works with balanced  data sets, summing all n_i's is equivalent to
+     * multyplying the number of replicates by the number of partials
+     */
+    
+    let N = 0;
+    for( let i = 0; i < partials.length; i++ ) N += partials[i].n;
+    
+    /*
+     * Compute the pooled variance s_p² (pvar)
+     */
+    
+    let pvar = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      pvar += (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n)/(N-k);
+    }
+    
+    let A = (N-k)*Math.log(pvar);
+
+    /*
+     * Now compute B = Sum[(n_i-1)*ln(s_i²)]
+     */
+    
+    let B = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      B += (partials[i].n-1)*Math.log((partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n)/(partials[i].n-1));
+    }    
+    
+    /*
+     * Now compute C = 1/(3*(k-1))
+     */
+    
+    let C = 1/(3*(k-1));
+    
+    /*
+     * Now compute D = Sum[1/(n_i-1) - 1/(N-k)]
+     */
+
+    let D = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      D += (1/(partials[i].n-1) - 1/(N-k));
+    }
+    
+    /*
+     * Now compute Bartlett's K value
+     */
+    
+    let bartlett_k = (A - B)/(1 + (C*D));
+    
+    let prob = 1.0 - jStat.chisquare.cdf(bartlett_k, k-1);
+    if( prob > 1 ) prob = 1;
+    if( prob < 0 ) prob = 0;
+     
+    let result = "";
+    result += "<p>Bartlett's Test for <b><i>k</i> = " + k.toString() + "</b> averages and <b>&nu; = ";
+    result += (k-1).toString() + "</b> degrees of freedom: <b>" + bartlett_k.toString() + "</b></p>";
+    result += "<p>P = <b>" + prob.toString() + "</b></p>"; 
+    
+//     result += "<p>N = " + N.toString() + " (N-k) = " + (N-k).toString() + " Pvar = " + pvar.toString() + "</p>"; 
+//     result += "<p>A = " + A.toString() + "</p>"; 
+//     result += "<p>B = " + B.toString() + "</p>"; 
+//     result += "<p>C = " + C.toString() + "</p>"; 
+//     result += "<p>D = " + D.toString() + "</p>"; 
+    
+ 
+    
+    return result;
+    
+  }    
   
   function testCochran() {
       
@@ -2661,33 +2591,13 @@ var anova = (function () {
   /*                                                                       */  
   /*************************************************************************/  
  
-  
-  //   <ul>    
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">filter_drama</i>First</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">place</i>Second</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">whatshot</i>Third</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //   </ul>
-
   function homogeneityTests() {
       
     let d = document.getElementById('homogen');
     
     d.innerHTML = '<div class="ct">Cochran\'s test' + testCochran() + "</div>";
     
-    //let html = "<h2>Cochran's Test</h2>";
-    
-    //html += testCochran();
-
-    //d.innerHTML = html;
+    d.innerHTML += '<div class="ct">Bartlett\'s test' + testBartlett() + "</div>";
     
   }
   
@@ -2792,10 +2702,6 @@ var anova = (function () {
     }
     
     
-    //#DEBUG
-    //console.table(terms)
-    //displayTerms("Unsorted and uncorrected terms");
-    //!DEBUG
     
     /*
      * Compute the 'partials' list, i.e., a list with all terms potentially
@@ -2840,9 +2746,6 @@ var anova = (function () {
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
       
-      //#DEBUG        
-      displayTerms( "List of Terms" );
-      //!DEBUG      
 
       /*
        * Check if there are nested factors and correct the
@@ -2851,9 +2754,6 @@ var anova = (function () {
       
       correctForNesting();
       
-      //#DEBUG   
-      displayFactors(); 
-      //!DEBUG     
       
       /*
        * Compute Cornfield-Tukey rules to determine
@@ -2862,9 +2762,6 @@ var anova = (function () {
       
       computeCTRules();
       
-      //#DEBUG 
-      displayTerms( "List of Corrected Terms" );
-      //!DEBUG      
       
       /*
        * Display tables of averages per factor or combinations of factors
@@ -2943,28 +2840,6 @@ function selectTab(name) {
 document.addEventListener('DOMContentLoaded', function () {
     
     
-    //#DEBUG 
-
-    /*
-     * Append 'debug' tab and corresponding <a href> if in Debug Mode
-     */
-    
-    let t = document.getElementById('tab-contents');
-    let d = document.createElement('div');
-    d.className = 'tabcontent';
-    d.id = 'debug'; 
-    t.appendChild(d);
-    
-    t = document.getElementById('tabs');
-    d = document.createElement('a');
-    d.name = 'debug';
-    d.className = 'tabs';
-    d.href = '#!';
-    d.onclick = function () { selectTab('debug'); };
-    d.innerHTML = 'Debug';
-    t.appendChild(d);
-    
-    //!DEBUG
     
     
     // Hide all tab contents

@@ -1,4 +1,110 @@
+  function testBartlett() {
+    /*
+     * Compute Bartlett's test which is a ratio between the largest sample   
+     * 
+     *           (N-k)*ln(s_p²) - Sum[(n_i-1)*ln(s_i²)]
+     * X² =     ---------------------------------------
+     *          1 + 1/(3*(k-1))*Sum[1/(n_i-1) - 1/(N-k)]
+     * 
+     * N    = Sum[n_i]
+     * s_p² = Sum[(n_i-1)*s_i²]/(N-k)
+     * k    = number of means being compared
+     * n_i  = size for mean i (sample sizes should be similar: balanced analysis)
+     * s_i² = variance of sample i
+     * 
+     * An easier way is explained in https://stattrek.com/online-calculator/bartletts-test.aspx
+     * 
+     *         A - B
+     * X² = -----------
+     *      1 + (C * D)
+     * 
+     * with 
+     * 
+     * A = (N-k)*ln(s_p²)
+     * B = Sum[(n_i-1)*ln(s_i²)]
+     * C = 1/(3*(k-1))
+     * D = Sum[1/(n_i-1) - 1/(N-k)]
+     * 
+     * 
+     */
 
+    /*
+     * k denotes the total number of averages involved in the test,
+     * determind by all possible combinations between factor levels
+     */
+    
+    let k = partials.length;
+    
+    /*
+     * Compute N, the sum of all sample sizes. Since the present anova-web only
+     * works with balanced  data sets, summing all n_i's is equivalent to
+     * multyplying the number of replicates by the number of partials
+     */
+    
+    let N = 0;
+    for( let i = 0; i < partials.length; i++ ) N += partials[i].n;
+    
+    /*
+     * Compute the pooled variance s_p² (pvar)
+     */
+    
+    let pvar = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      pvar += (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n)/(N-k);
+    }
+    
+    let A = (N-k)*Math.log(pvar);
+
+    /*
+     * Now compute B = Sum[(n_i-1)*ln(s_i²)]
+     */
+    
+    let B = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      B += (partials[i].n-1)*Math.log((partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n)/(partials[i].n-1));
+    }    
+    
+    /*
+     * Now compute C = 1/(3*(k-1))
+     */
+    
+    let C = 1/(3*(k-1));
+    
+    /*
+     * Now compute D = Sum[1/(n_i-1) - 1/(N-k)]
+     */
+
+    let D = 0;
+    for( let i = 0; i < partials.length; i++ ){
+      D += (1/(partials[i].n-1) - 1/(N-k));
+    }
+    
+    /*
+     * Now compute Bartlett's K value
+     */
+    
+    let bartlett_k = (A - B)/(1 + (C*D));
+    
+    let prob = 1.0 - jStat.chisquare.cdf(bartlett_k, k-1);
+    if( prob > 1 ) prob = 1;
+    if( prob < 0 ) prob = 0;
+     
+    let result = "";
+    result += "<p>Bartlett's Test for <b><i>k</i> = " + k.toString() + "</b> averages and <b>&nu; = ";
+    result += (k-1).toString() + "</b> degrees of freedom: <b>" + bartlett_k.toString() + "</b></p>";
+    result += "<p>P = <b>" + prob.toString() + "</b></p>"; 
+    
+//     result += "<p>N = " + N.toString() + " (N-k) = " + (N-k).toString() + " Pvar = " + pvar.toString() + "</p>"; 
+//     result += "<p>A = " + A.toString() + "</p>"; 
+//     result += "<p>B = " + B.toString() + "</p>"; 
+//     result += "<p>C = " + C.toString() + "</p>"; 
+//     result += "<p>D = " + D.toString() + "</p>"; 
+    
+ 
+    
+    return result;
+    
+  }    
   
   function testCochran() {
       
@@ -115,32 +221,12 @@
   /*                                                                       */  
   /*************************************************************************/  
  
-  
-  //   <ul>    
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">filter_drama</i>First</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">place</i>Second</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //     <li>
-  //       <div class="collapsible-header"><i class="material-icons">whatshot</i>Third</div>
-  //       <div class="collapsible-body"><span>Lorem ipsum dolor sit amet.</span></div>
-  //     </li>
-  //   </ul>
-
   function homogeneityTests() {
       
     let d = document.getElementById('homogen');
     
     d.innerHTML = '<div class="ct">Cochran\'s test' + testCochran() + "</div>";
     
-    //let html = "<h2>Cochran's Test</h2>";
-    
-    //html += testCochran();
-
-    //d.innerHTML = html;
+    d.innerHTML += '<div class="ct">Bartlett\'s test' + testBartlett() + "</div>";
     
   }
