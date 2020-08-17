@@ -42,8 +42,8 @@ The *src/* directory is not necessary unless you intend to modify or improve the
 
 Another way to run **anova-web** is to uncompress or clone this github repository somewhere in the directory tree of a personal computer. Then, using a GUI, click on *index.html*. This should run the whole bundle just fine (at least it does on a Linux system running KDE Plasma 5). 
 
-### General flow of the program
-
+### General structure of the program
+```
 openDataFile()
  │
  ├ resetAnalysis()
@@ -83,7 +83,7 @@ openDataFile()
              ├ displayMultipleComparisons()
              │
              └ displayANOVA()
- 
+ ```
  
 
 
