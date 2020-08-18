@@ -36,10 +36,10 @@
                 <td>Precision</td><td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
                 </tr>
                 <tr>
-                <td>Dec. separator</td><td><button class="button" id="normdecsep" onclick="sample.switchDecSep('normdecsep','normres')" value="," disabled>, (comma)</button></td>
+                <td>Dec. separator</td><td><button class="button" id="normsep" onclick="sample.switchDecSep()" value="," disabled>, (comma)</button></td>
                 </tr>
                 <tr>
-                <td></td><td><button class="button" onclick="sample.normGenerate()">Generate</button></td>
+                <td></td><td><button class="button" onclick="sample.sampleNormal()">Generate</button></td>
                 </tr>
                 <tr>
                 <td></td><td><button class="button" onclick="sample.normReset()">Reset</button></td>
@@ -48,7 +48,6 @@
             </table>
             </div>
             <div class="ct" id="norm" style="display: none;">
-
             </div>
             <div class="ct" id="normstats" style="display: none;">
             </div>

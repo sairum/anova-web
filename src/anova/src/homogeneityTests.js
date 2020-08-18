@@ -1,6 +1,7 @@
   function testBartlett() {
+      
     /*
-     * Compute Bartlett's test which is a ratio between the largest sample   
+     * Compute Bartlett's test   
      * 
      *           (N-k)*ln(s_p²) - Sum[(n_i-1)*ln(s_i²)]
      * X² =     ---------------------------------------
@@ -12,7 +13,9 @@
      * n_i  = size for mean i (sample sizes should be similar: balanced analysis)
      * s_i² = variance of sample i
      * 
-     * An easier way is explained in https://stattrek.com/online-calculator/bartletts-test.aspx
+     * An easier way to do this, well explained at 
+     * https://stattrek.com/online-calculator/bartletts-test.aspx
+     * is as follows:
      * 
      *         A - B
      * X² = -----------

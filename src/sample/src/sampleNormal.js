@@ -50,4 +50,10 @@
     text += "<tr><td><i>s</i>&sup2; (variance)</td><td>" + variance.toString() + "</td></tr>";
     stats.innerHTML = text;
     stats.style.display = "inline-block";  
+    
+    /*
+     * Enable decimal separator switch
+     */
+    document.getElementById("normsep").disabled = false;
+    
   }

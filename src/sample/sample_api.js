@@ -8,7 +8,7 @@
   
   return {
     setAccordion: setAccordion,
-    normGenerate: normGenerate,
+    sampleNormal: sampleNormal,
     normReset: normReset,
     setVar: setVar,
     setPrecision: setPrecision,
