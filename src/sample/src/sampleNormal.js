@@ -4,9 +4,9 @@
      * Grab population parameters from 'sample.html'
      */
     
-    let mean = parseFloat(document.getElementById("normavg").value);
-    let std  = parseFloat(document.getElementById("normstd").value);
-    let r    = parseInt(document.getElementById("normn").value);
+    let mean = parseFloat(document.getElementById("norm_avg").value);
+    let std  = parseFloat(document.getElementById("norm_std").value);
+    let r    = parseInt(document.getElementById("norm_n").value);
     
     //console.log(mean, std, r);
     
@@ -14,10 +14,10 @@
      * Clear anything in 'mormres' and 'normstats' <div>s
      */
     
-    let result = document.getElementById("norm");
+    let result = document.getElementById("norm_res");
     result.innerHTML = "";
     
-    let stats = document.getElementById("normstats");
+    let stats = document.getElementById("norm_stats");
     stats.innerHTML = "";
     
     /*
@@ -38,7 +38,7 @@
     let sd = Math.sqrt(variance).toFixed(precision);
     
     let text = "<h3>Sampled values</h3>";
-    text += "<textarea cols=\"20\" rows=\"10\" id=\"normres\">";
+    text += "<textarea cols=\"20\" rows=\"10\" id=\"norm_results\">";
     for ( let i = 0; i < r; i++ )  text += s[i].toFixed(precision) + "\n";
     text += "</textarea>";    
     result.innerHTML = text;
@@ -54,6 +54,7 @@
     /*
      * Enable decimal separator switch
      */
-    document.getElementById("normsep").disabled = false;
+    
+    document.getElementById("norm_sep").disabled = false;
     
   }

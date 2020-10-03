@@ -1,73 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Experimental Design Course</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="css/normalize.min.css">
-        <link rel="stylesheet" href="css/style.css">
-    </head>
-    <body>
-        <header>
-          <h1><a href="index.html">&#9776;&nbsp;</a>Experimental Design</h1>
-          <h2>Sampling nature</h2>
-        </header>
-        
-        <main>
-          <button class="accordion">Sampling the normal distribution</button>
-          <div class="panel">
+   <head>
+      <title>Experimental Design Course</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link rel="stylesheet" href="css/normalize.min.css">
+      <link rel="stylesheet" href="css/style.min.css">
+   </head>
+   <body>
+      <header>
+         <h1><a href="index.html">&#9776;&nbsp;</a>Experimental Design</h1>
+         <h2>Sampling nature</h2>
+      </header>
+      <main>
+         <button class="accordion">Sampling the normal distribution</button>
+         <div class="panel">
             <div class="ct" id="normpars">
-            <h3>Population parameters</h3>
-            <table>
-                <tr>
-                <td>&mu; (average)</td><td><input type="number" id="normavg" value="8.0"></td>
-                </tr>
-                <tr>
-                <td>&sigma; (stdev)</td><td><input type="number" id="normstd" min="0.1" value="1.5" step="0.1" onchange="sample.setVar()"></td>
-                </tr>
-                <tr>
-                <td>&sigma;&sup2; (variance)</td><td><input type="number" id="normvar" value="2.25" disabled></td>
-                </tr>
-                <tr><td></td><td></td></tr>
-                <tr>
-                <td><em>n</em> (replicates)</td><td><input type="number" id="normn" min="1" value="10" step="1"></td>
-                </tr>
-                <tr>
-                <td>Precision</td><td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
-                </tr>
-                <tr>
-                <td>Dec. separator</td><td><button class="button" id="normsep" onclick="sample.switchDecSep()" value="," disabled>, (comma)</button></td>
-                </tr>
-                <tr>
-                <td></td><td><button class="button" onclick="sample.sampleNormal()">Generate</button></td>
-                </tr>
-                <tr>
-                <td></td><td><button class="button" onclick="sample.normReset()">Reset</button></td>
-                </tr>
-                
-            </table>
+               <h3>Population parameters</h3>
+               <table>
+                  <tr>
+                     <td>&mu; (average)</td>
+                     <td><input type="number" id="norm_avg" value="8.0"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma; (stdev)</td>
+                     <td><input type="number" id="norm_std" min="0.1" value="1.5" step="0.1" onchange="sample.set_normVar()"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma;&sup2; (variance)</td>
+                     <td><input type="number" id="norm_var" value="2.25" disabled></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  <tr>
+                     <td><em>n</em> (replicates)</td>
+                     <td><input type="number" id="norm_n" min="1" value="10" step="1"></td>
+                  </tr>
+                  <tr>
+                     <td>Precision</td>
+                     <td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
+                  </tr>
+                  <tr>
+                     <td>Dec. separator</td>
+                     <td><button class="button" id="norm_sep" onclick="sample.switchDecSep('norm_results','norm_sep')" value="," disabled>, (comma)</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.sampleNormal()">Generate</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.normReset()">Reset</button></td>
+                  </tr>
+               </table>
             </div>
-            <div class="ct" id="norm" style="display: none;">
+            <div class="ct" id="norm_res" style="display: none;">
             </div>
-            <div class="ct" id="normstats" style="display: none;">
+            <div class="ct" id="norm_stats" style="display: none;">
             </div>
-          </div>
-
+         </div>
          <button class="accordion">Multiple samples and the central limit theorem</button>
          <div class="panel">
-           <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <div class="ct" id="clt">
+               <h3>Number of averages to sample</h3>
+               <table>
+                  <tr>
+                     <td>N</td>
+                     <td><input type="number" id="clt_N" value="100"></td>
+                  </tr>
+               </table>
+               <h3>Population parameters</h3>
+               <table>
+                  <tr>
+                     <td>&mu; (average)</td>
+                     <td><input type="number" id="clt_avg" value="8.0"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma; (stdev)</td>
+                     <td><input type="number" id="clt_std" min="0.1" value="1.5" step="0.1" onchange="sample.set_cltVar()"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma;&sup2; (variance)</td>
+                     <td><input type="number" id="clt_var" value="2.25" disabled></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  <tr>
+                     <td><em>n</em> (replicates)</td>
+                     <td><input type="number" id="clt_n" min="1" value="10" step="1"></td>
+                  </tr>
+                  <tr>
+                     <td>Precision</td>
+                     <td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
+                  </tr>
+                  <tr>
+                     <td>Dec. separator</td>
+                     <td><button class="button" id="clt_sep" onclick="sample.switchDecSep('clt_results','clt_sep')" value="," disabled>, (comma)</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.sampleNormalMultipleTimes()">Generate</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.cltReset()">Reset</button></td>
+                  </tr>
+               </table>
+            </div>
+            <div class="ct" id="clt_res" style="display: none;">
+            </div>
+            <div class="ct" id="clt_stats" style="display: none;">
+            </div>
          </div>
-
-        </main>
-        
-        <footer class="page-footer">
-          © 2019 Copyright amsantos @ fc up pt
-        </footer>
-        
-        <script type="text/javascript" src="js/jstat.min.js"></script>
-        <script type="text/javascript" src="js/seedrandom.min.js"></script>
-        <script type="text/javascript" src="js/FileSaver.min.js"></script>
-<!--         <script type="text/javascript" src="js/chart.min.js"></script> -->
-        <script type="text/javascript" src="js/sample.js"></script>        
-    </body>
+         <button class="accordion">Multiple <em>t</em>-tests</button>
+         <div class="panel">
+            <div class="ct" id="ttests">
+            </div>
+         </div>
+         <button class="accordion">Multiple <em>F</em>-tests (between two samples)</button>
+         <div class="panel">
+            <div class="ct" id="ftests">
+               <h3>Number of F tests to perform</h3>
+               <table>
+                  <tr>
+                     <td>N</td>
+                     <td><input type="number" id="F_N" value="100"></td>
+                  </tr>
+               </table>
+               <h3>Population parameters</h3>
+               <table>
+                  <tr>
+                     <td>&mu; (average)</td>
+                     <td><input type="number" id="F_avg" value="8.0"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma; (stdev)</td>
+                     <td><input type="number" id="F_std" min="0.1" value="1.5" step="0.1" onchange="sample.set_FVar()"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma;&sup2; (variance)</td>
+                     <td><input type="number" id="F_var" value="2.25" disabled></td>
+                  </tr>
+                  <tr>
+                     <td>n&#x2081;</td>
+                     <td><input type="number" id="F_n1" value="2"></td>
+                  </tr>
+                  <tr>
+                     <td>n&#x2082;</td>
+                     <td><input type="number" id="F_n2" value="10"></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  <tr>
+                     <td>Precision</td>
+                     <td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
+                  </tr>
+                  <tr>
+                     <td>Dec. separator</td>
+                     <td><button class="button" id="F_sep" onclick="sample.switchDecSep('F_results','F_sep')" value="," disabled>, (comma)</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.multipleFTests()">Generate</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.FReset()">Reset</button></td>
+                  </tr>
+               </table>
+            </div>
+            <div class="ct" id="F_res" style="display: none;"> 
+            </div>
+         </div>
+      </main>
+      <footer class="page-footer">
+         © 2019 Copyright amsantos @ fc up pt
+      </footer>
+      <script type="text/javascript" src="js/jstat.min.js"></script>
+      <script type="text/javascript" src="js/seedrandom.min.js"></script>
+      <script type="text/javascript" src="js/FileSaver.min.js"></script>
+      <!--         <script type="text/javascript" src="js/chart.min.js"></script> -->
+      <script type="text/javascript" src="js/sample.js"></script>        
+   </body>
 </html>

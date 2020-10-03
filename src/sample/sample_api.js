@@ -9,16 +9,31 @@
   return {
     setAccordion: setAccordion,
     sampleNormal: sampleNormal,
+    sampleNormalMultipleTimes: sampleNormalMultipleTimes,
     normReset: normReset,
-    setVar: setVar,
+    cltReset: cltReset,
+    set_normVar: set_normVar,
+    set_cltVar: set_cltVar,
+    set_FVar: set_FVar,
     setPrecision: setPrecision,
-    switchDecSep: switchDecSep
+    switchDecSep: switchDecSep,
+    multipleFTests: multipleFTests,
     
   } // End of 'return' (exported function)
   
 })();
- 
-document.addEventListener('DOMContentLoaded', function () {
+
+//  /*
+//   * Automatically change variance when standard deviation changes
+//   */
+// 
+// document.getElementById("norm_std").addEventListener("onchange", sample.set_normVar());
+// document.getElementById("clt_std").addEventListener("onchange", sample.set_cltVar());
+// 
+
+document.addEventListener("DOMContentLoaded", function () {
     
-  sample.setAccordion(); 
+  sample.setAccordion();
+  
+  
 });    
