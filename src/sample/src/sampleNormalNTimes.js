@@ -1,4 +1,4 @@
-  function sampleNormalMultipleTimes() {
+  function sampleNormalNTimes() {
       
     /*
      * Grab population parameters from 'sample.html'

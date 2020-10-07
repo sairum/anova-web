@@ -8,17 +8,14 @@
   
   return {
     setAccordion: setAccordion,
+    reset: reset,
     sampleNormal: sampleNormal,
-    sampleNormalMultipleTimes: sampleNormalMultipleTimes,
-    normReset: normReset,
-    cltReset: cltReset,
-    set_normVar: set_normVar,
-    set_cltVar: set_cltVar,
-    set_FVar: set_FVar,
+    sampleNormalNTimes: sampleNormalNTimes,
+    setVar: setVar,
     setPrecision: setPrecision,
     switchDecSep: switchDecSep,
     multipleFTests: multipleFTests,
-    
+    multipleTTests: multipleTTests,
   } // End of 'return' (exported function)
   
 })();

@@ -2,4 +2,5 @@ classes/*.pdf
 support/*.pdf
 data/
 references/
-git-commands
+git-commands.txt
+.gitignore
