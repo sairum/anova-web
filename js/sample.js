@@ -20,89 +20,6 @@ var sample = (function () {
    */
   
   var separator = ".";
-  function multipleTTests() {
-      
-    /*
-     * Grab population parameters from 'sample.html'
-     */
-    
-    let N    = parseInt(document.getElementById("t_N").value);
-    let mean = parseFloat(document.getElementById("t_avg").value);
-    let std  = parseFloat(document.getElementById("t_std").value);
-    let n    = parseInt(document.getElementById("t_n").value);
-    console.log(N, mean, std, n);
-    
-    /*
-     * Clear anything in 't_res' <div>s
-     */
-    
-    let result = document.getElementById("t_res");
-    result.innerHTML = "";
-
-    
-    /*
-     * Generate N t-tests by sampling two samples with
-     * n1 and n2 replicates each from a virtual population
-     * with mean = t_avg and variance = (t_std)²
-     */
-    
-     let ttests = [];
-     
-     let x, sumx, sumx2, x1, var1, x2, var2;
-     
-     for ( let i = 0; i < N; i++ ) {
-       
-       /*
-        *First sample
-        */
-       
-       sumx = 0, sumx2 = 0;
-       for ( let j = 0; j < n; j++ ) {
-         x1 = jStat.normal.sample( mean, std );
-         sumx += x1;
-         sumx2 += Math.pow(x1,2);
-       }
-       x1 = sumx/n;
-       var1 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
-       
-       sumx = 0, sumx2 = 0;
-       for ( let j = 0; j < n; j++ ) {
-         x2 = jStat.normal.sample( mean, std );
-         sumx += x2;
-         sumx2 += Math.pow(x2,2);
-       }  
-       x2 = sumx/n;
-       var2 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
-       
-       ttests.push((x1-x2)/Math.sqrt(var1/n+var2/n));
-     }  
-  
-     let text = "<h3>Multiple <em>t</em>-tests</h3>";
-     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_results\">";
-     for ( let i = 0; i < N; i++ )  text += ttests[i].toFixed(precision) + "\n";
-     text += "</textarea>";    
-     result.innerHTML = text;
-     result.style.display = "inline-block";  
-
-    /*
-     * Enable decimal separator switch
-     */
-    
-    document.getElementById("t_sep").disabled = false;
-    
-  }
-
-  /*
-   * Automatically compute the variance
-   * based on the standard deviation that is
-   * provided in input '_std'
-   */
-  
-  function setVar( tagid ) {
-    let s = document.getElementById( tagid + "_std" ).value; 
-    document.getElementById( tagid + "_var" ).value = Math.pow(s,2).toFixed(precision);
-  }    
-  
   function multipleFTests() {
       
     /*
@@ -179,6 +96,116 @@ var sample = (function () {
     document.getElementById("F_sep").disabled = false;
     
   }
+  function multipleTTests() {
+      
+    /*
+     * Grab population parameters from 'sample.html'
+     */
+    
+    let N    = parseInt(document.getElementById("t_N").value);
+    let mean = parseFloat(document.getElementById("t_avg").value);
+    let std  = parseFloat(document.getElementById("t_std").value);
+    let n    = parseInt(document.getElementById("t_n").value);
+    console.log(N, mean, std, n);
+    
+    /*
+     * Clear anything in 't_res' <div>s
+     */
+    
+    let result = document.getElementById("t_res");
+    result.innerHTML = "";
+
+    
+    /*
+     * Generate N t-tests by sampling two samples with
+     * n1 and n2 replicates each from a virtual population
+     * with mean = t_avg and variance = (t_std)²
+     */
+    
+     let ttests = [];
+     
+     let x, sumx, sumx2, x1, var1, x2, var2;
+     
+     for ( let i = 0; i < N; i++ ) {
+       
+       /*
+        *First sample
+        */
+       
+       sumx = 0, sumx2 = 0;
+       for ( let j = 0; j < n; j++ ) {
+         x1 = jStat.normal.sample( mean, std );
+         sumx += x1;
+         sumx2 += Math.pow(x1,2);
+       }
+       x1 = sumx/n;
+       var1 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
+       
+       sumx = 0, sumx2 = 0;
+       for ( let j = 0; j < n; j++ ) {
+         x2 = jStat.normal.sample( mean, std );
+         sumx += x2;
+         sumx2 += Math.pow(x2,2);
+       }  
+       x2 = sumx/n;
+       var2 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
+       
+       ttests.push((x1-x2)/Math.sqrt(var1/n+var2/n));
+     }  
+  
+     let text = "<h3>Multiple <em>t</em>-tests</h3>";
+     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_results\">";
+     for ( let i = 0; i < N; i++ )  text += ttests[i].toFixed(precision) + "\n";
+     text += "</textarea>";    
+     result.innerHTML = text;
+     result.style.display = "inline-block";  
+
+    /*
+     * Enable decimal separator switch
+     */
+    
+    document.getElementById("t_sep").disabled = false;
+    
+  }
+ 
+  function reset(tagid) {
+    
+    /*
+     * _avg and _std and _var are common to all simulations
+     */
+    
+    document.getElementById(tagid + "_avg").value = "8.0";  
+    document.getElementById(tagid + "_std").value = "1.5";  
+    document.getElementById(tagid + "_var").value = "2.25";
+    
+    /*
+     * Only F tests have no 'n' for replicates 
+     * (they have n1 and n2)
+     */
+    
+    if ( ( tagid !== 'F' ) ) document.getElementById(tagid + "_n").value = "10";
+    else {
+      document.getElementById("F_n1").value = "2"; 
+      document.getElementById("F_n2").value = "10"; 
+    }    
+    
+    /*
+     * All simulations have 'N' (number of samples) except 
+     * the one for sampling from the normal distribution
+     * ( tagid ='norm' )
+     */
+    
+    if ( tagid !== 'norm' ) document.getElementById(tagid + "_N").value = "100";
+    
+    /*
+     * Clean also the results section (a <textarea>)
+     */
+    
+    document.getElementById(tagid + "_results").value = "";
+    
+  }
+  
+  
   function sampleNormal() {
       
     /*
@@ -238,22 +265,6 @@ var sample = (function () {
     
     document.getElementById("norm_sep").disabled = false;
     
-  }
-  
-  function setPrecision() {
-    let s = document.getElementById("precision").value;
-    precision = parseInt(s);
-    if(precision < 1) {
-      document.getElementById("precision").value = 1;
-      precision = 1;
-    } else {
-      if(precision > 10) { 
-        document.getElementById("precision").value = 10;
-        precision = 10; 
-      } else {
-        document.getElementById("precision").value = precision;
-      }    
-    }    
   }
   function sampleNormalNTimes() {
       
@@ -341,44 +352,33 @@ var sample = (function () {
       });
     }
   }
- 
-  function reset(tagid) {
-    
-    /*
-     * _avg and _std and _var are common to all simulations
-     */
-    
-    document.getElementById(tagid + "_avg").value = "8.0";  
-    document.getElementById(tagid + "_std").value = "1.5";  
-    document.getElementById(tagid + "_var").value = "2.25";
-    
-    /*
-     * Only F tests have no 'n' for replicates 
-     * (they have n1 and n2)
-     */
-    
-    if ( ( tagid !== 'F' ) ) document.getElementById(tagid + "_n").value = "10";
-    else {
-      document.getElementById("F_n1").value = "2"; 
-      document.getElementById("F_n2").value = "10"; 
-    }    
-    
-    /*
-     * All simulations have 'N' (number of samples) except 
-     * the one for sampling from the normal distribution
-     * ( tagid ='norm' )
-     */
-    
-    if ( tagid !== 'norm' ) document.getElementById(tagid + "_N").value = "100";
-    
-    /*
-     * Clean also the results section (a <textarea>)
-     */
-    
-    document.getElementById(tagid + "_results").value = "";
-    
-  }
   
+  function setPrecision() {
+    let s = document.getElementById("precision").value;
+    precision = parseInt(s);
+    if(precision < 1) {
+      document.getElementById("precision").value = 1;
+      precision = 1;
+    } else {
+      if(precision > 10) { 
+        document.getElementById("precision").value = 10;
+        precision = 10; 
+      } else {
+        document.getElementById("precision").value = precision;
+      }    
+    }    
+  }
+
+  /*
+   * Automatically compute the variance
+   * based on the standard deviation that is
+   * provided in input '_std'
+   */
+  
+  function setVar( tagid ) {
+    let s = document.getElementById( tagid + "_std" ).value; 
+    document.getElementById( tagid + "_var" ).value = Math.pow(s,2).toFixed(precision);
+  }    
   
   
   /*
@@ -408,6 +408,109 @@ var sample = (function () {
     }  
     document.getElementById(tagid).value = res;
   }
+  function tTest() {
+      
+    /*
+     * Grab population parameters from 'sample.html'
+     */
+    
+    let diff    = parseInt(document.getElementById("t_diff").value);
+    let mean = parseFloat(document.getElementById("t_avg").value);
+    let std  = parseFloat(document.getElementById("t_std").value);
+    let n    = parseInt(document.getElementById("t_n").value);
+    //console.log(diff, mean, std, n);
+    
+    /*
+     * Clear anything in 't_res' <div>s
+     */
+    
+    let result = document.getElementById("t_res");
+    result.innerHTML = "";
+
+    let stats = document.getElementById("t_stats");
+    stats.innerHTML = "";
+    
+    /*
+     * Generate N t-tests by sampling two samples with
+     * n1 and n2 replicates each from a virtual population
+     * with mean = t_avg and variance = (t_std)²
+     */
+    
+     let s1 = [],
+         s2 = [];
+     
+     let x, sumx, sumx2, x1, var1, x2, var2;
+     
+       
+     /*
+      * First sample
+      */
+       
+     sumx = 0, sumx2 = 0;
+     //let v1 = [11.2, 12.4, 10.3, 10.5, 7.7, 12.1, 8.3, 9.4, 10.5]; n=9;
+     for ( let i = 0; i < n; i++ ) {
+       x = jStat.normal.sample( mean, std );
+       //x = v1[i];
+       sumx += x;
+       sumx2 += Math.pow(x,2);
+       s1.push(x);  
+     }
+     x1 = sumx/n;
+     var1 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
+
+     sumx = 0, sumx2 = 0;
+     //let v2 = [12.2, 13.4, 12.1, 11.4, 5.7, 10.9, 9.2, 9.0, 11.5]; n=9;
+     for ( let i = 0; i < n; i++ ) {
+       //x = v2[i];
+       x = jStat.normal.sample(mean + diff, std );
+       sumx += x;
+       sumx2 += Math.pow(x,2);
+       s2.push(x);  
+     }
+     x2 = sumx/n;
+     var2 = (sumx2 - Math.pow(sumx,2)/n)/(n-1);
+     
+     //console.log(x1,var1,x2,var2)
+  
+     let text = "<h3>Population 1</h3>";
+     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_results1\">";
+     for ( let i = 0, ln = s1.length; i < ln; i++ )  text += s1[i].toFixed(precision) + "\n";
+     text += "\n";
+     text += "</textarea>";  
+     
+     text += "<h3>Population 2</h3>";
+     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_results2\">";
+     for ( let i = 0, ln = s2.length; i < ln; i++ )  text += s2[i].toFixed(precision) + "\n";
+     text += "</textarea>";  
+     
+     
+     result.innerHTML = text;
+     result.style.display = "inline-block";  
+     
+     
+     let t = (x1-x2)/Math.sqrt(var1/n+var2/n);
+     let p1 = jStat.studentt.cdf(t,2*(n-1)),
+         p2 = p1*2;
+
+     
+     text = "<h3><em>t</em>-test</h3>";
+     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_ttest\">";
+     
+     text += "t statistic = " + t.toFixed(precision) + "\n";
+     text += "p (two tailed) = " + (p2).toFixed(precision) + "\n";
+     text += "p (one tailed) = " + (p1).toFixed(precision) + "\n";
+     text += "</textarea>";
+     
+     stats.innerHTML = text;
+     stats.style.display = "inline-block"; 
+     
+    /*
+     * Enable decimal separator switch
+     */
+    
+    document.getElementById("t_sep").disabled = false;
+    
+  }
   
   /*************************************************************************/
   /*                                                                       */
@@ -426,6 +529,7 @@ var sample = (function () {
     switchDecSep: switchDecSep,
     multipleFTests: multipleFTests,
     multipleTTests: multipleTTests,
+    tTest: tTest
   } // End of 'return' (exported function)
   
 })();

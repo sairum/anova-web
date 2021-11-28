@@ -61,6 +61,7 @@
             <div class="ct" id="norm_stats" style="display: none;">
             </div>
          </div>
+         
          <button class="accordion">Multiple samples and the central limit theorem</button>
          <div class="panel">
             <div class="ct" id="clt">
@@ -116,20 +117,21 @@
             <div class="ct" id="clt_stats" style="display: none;">
             </div>
          </div>
-         <button class="accordion">Multiple <em>t</em>-tests</button>
+         
+         <button class="accordion">The <em>t</em>-test</button>
          <div class="panel">
-            <div class="ct" id="ttests">
-               <h3>Number of <em>t</em> tests to perform</h3>
+            <div class="ct" id="ttest">
+               <h3>Difference between averages</h3>
                <table>
                   <tr>
-                     <td>N</td>
-                     <td><input type="number" id="t_N" value="100"></td>
+                     <td>Effect size (&mu;<sub>2</sub> - &mu;<sub>1</sub>)</td>
+                     <td><input type="number" id="t_diff" value="1"></td>
                   </tr>
                </table>
                <h3>Population parameters</h3>
-               <table>
+               <table>              
                   <tr>
-                     <td>&mu; (average)</td>
+                     <td>&mu;<sub>1</sub> (average)</td>
                      <td><input type="number" id="t_avg" value="8.0"></td>
                   </tr>
                   <tr>
@@ -142,7 +144,63 @@
                   </tr>
                   <tr>
                      <td>n (replicates)</td>
-                     <td><input type="number" id="t_n" value="2"></td>
+                     <td><input type="number" id="t_n" value="10"></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  <tr>
+                     <td>Precision</td>
+                     <td><input type="number" id="precision" min="1" max="10" value="4" step ="1" onchange="sample.setPrecision()"></td>
+                  </tr>
+                  <tr>
+                     <td>Decimal separator</td>
+                     <td><button class="button" id="t_sep" onclick="sample.switchDecSep('t_results','t_sep')" value="," disabled>, (comma)</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.tTest()">Generate</button></td>
+                  </tr>
+                  <tr>
+                     <td></td>
+                     <td><button class="button" onclick="sample.reset('t')">Reset</button></td>
+                  </tr>
+               </table>
+            </div>
+            <div class="ct" id="t_res" style="display: none;">
+            </div>  
+            <div class="ct" id="t_stats" style="display: none;">
+            </div>
+         </div>
+         
+         <button class="accordion">Multiple <em>t</em>-tests</button>
+         <div class="panel">
+            <div class="ct" id="ttests">
+               <h3>Number of <em>t</em> tests to perform</h3>
+               <table>
+                  <tr>
+                     <td>N</td>
+                     <td><input type="number" id="tt_N" value="100"></td>
+                  </tr>
+               </table>
+               <h3>Population parameters</h3>
+               <table>
+                  <tr>
+                     <td>&mu; (average)</td>
+                     <td><input type="number" id="tt_avg" value="8.0"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma; (stdev)</td>
+                     <td><input type="number" id="tt_std" min="0.1" value="1.5" step="0.1" onchange="sample.setVar('tt')"></td>
+                  </tr>
+                  <tr>
+                     <td>&sigma;&sup2; (variance)</td>
+                     <td><input type="number" id="tt_var" value="2.25" disabled></td>
+                  </tr>
+                  <tr>
+                     <td>n (replicates)</td>
+                     <td><input type="number" id="tt_n" value="2"></td>
                   </tr>
                   <tr>
                      <td></td>
@@ -154,7 +212,7 @@
                   </tr>
                   <tr>
                      <td>Dec. separator</td>
-                     <td><button class="button" id="t_sep" onclick="sample.switchDecSep('t_results','t_sep')" value="," disabled>, (comma)</button></td>
+                     <td><button class="button" id="tt_sep" onclick="sample.switchDecSep('tt_results','tt_sep')" value="," disabled>, (comma)</button></td>
                   </tr>
                   <tr>
                      <td></td>
@@ -162,13 +220,14 @@
                   </tr>
                   <tr>
                      <td></td>
-                     <td><button class="button" onclick="sample.reset('t')">Reset</button></td>
+                     <td><button class="button" onclick="sample.reset('tt')">Reset</button></td>
                   </tr>
                </table>
             </div>
-            <div class="ct" id="t_res" style="display: none;">
+            <div class="ct" id="tt_res" style="display: none;">
             </div>           
          </div>
+         
          <button class="accordion">Multiple <em>F</em>-tests (between two samples)</button>
          <div class="panel">
             <div class="ct" id="ftests">
@@ -226,6 +285,7 @@
             <div class="ct" id="F_res" style="display: none;"> 
             </div>
          </div>
+         
       </main>
       <footer class="page-footer">
          © 2019 Copyright amsantos @ fc up pt

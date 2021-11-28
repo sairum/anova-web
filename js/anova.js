@@ -150,544 +150,6 @@ var anova = (function () {
   
   var filename= "";
 
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayCTRules                             */
-  /*                                                                       */
-  /* This function displays a table with the Analysis of Variance          */
-  /*                                                                       */     
-  /*************************************************************************/   
-  
-  function displayCTRules( ) {
-    
-    let c = document.getElementById('ctrules'); 
-    
-    
-    let table = '<div class="ct"><table><thead>';
-    
-    
-    /*
-     * Build the header of the table. First column for the ANOVA term name
-     */
-    
-    table += '<tr><th>Term</th>';
-    
-    
-    /*
-     * Now add one column for each subscript associated with each factor,
-     * plus one column for the Error. This is the CT table of multipliers,
-     * and its display is just for debugging purposes
-     */
-    
-    
-    /*
-     * We should build a table with as many columns as ANOVA terms (including
-     * the Error term) which will display the components of variance measured
-     * by each term. Again, displaying this is only necessary while debugging 
-     */
-    
-    
-    /*
-     * Finally a column to display which variance components are estimated
-     * by each term
-     */
-    
-    table += '<th>Estimates</th></tr></thead><tbody>';
-    
-    
-    /*
-     * Compute rows
-     */
-    
-    for(let i = 0, len = terms.length - 1; i < len; i++ ) {
-      table += '<tr><td>' + terms[i].name + '</td>';
-      
-      let est = [], name = "";
-      for ( let j = terms.length - 2; j >= 0; j--) {
-        if(terms[i].varcomp[j] > 0 ) {
-          if( ( terms[j].name === 'Error') || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
-          else name = terms[j].name;
-          if( terms[i].varcomp[j] === 1 ) est.push('&sigma;<sup>2</sup><sub>' + name + '</sub>');
-          else est.push(terms[i].varcomp[j].toString() + '*&sigma;<sup>2</sup><sub>' + name + '</sub>'); 
-        }
-      }
-      table += '<td>' + est.join(' + ') + '</td></tr>';
-      
-    }
-    
-    table += '</tbody></table></div>';
-    
-    
-    c.innerHTML = table;
-    
-  } 
-
-  
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            computeCTRules                             */
-  /*                                                                       */
-  /* This function computes Cornfield-Tukey Rules that will determine the  */
-  /* denominators of the F statistics in any ANOVA scenario. For a fully   */
-  /* orthogonal ANOVA with fixed factors, the denominator for all tests is */
-  /* the Error term. For mixed or more complex models the denominator      */
-  /* changes according to the CT rules                                     */
-  /*                                                                       */ 
-  /*************************************************************************/
-
-  function computeCTRules() {
-    
-    /*
-     * Build the table of multipliers for all terms
-     * Skip the last two terms. The "total" is not necessary
-     * and the ct_codes for the "Error" are already computed
-     * [1,1,...,1] for all factors
-     */
-      
-    for ( let i = 0, tl = terms.length - 2; i < tl; i++ ) {
-      terms[i].ct_codes = new Array(nfactors+1).fill(0);
-      for ( let k = 0; k < nfactors; k++ ) {
-        let t = terms[i].codes[k];
-        if( t != 0 ) {
-            
-          /*
-           * subscript is in the term
-           */
-          
-          if ( t == 1 ) {
-              
-            /*
-             * it's outside parenthesis
-             */
-            
-            if (factors[k].type === RANDOM) terms[i].ct_codes[k] = 1;
-            else terms[i].ct_codes[k] = 0; 
-          } else {
-              
-            /*
-             * subscript is within parenthesis
-             */
-            
-            terms[i].ct_codes[k] = 1;  
-          } 
-        } else {
-            
-          /*
-           * This subscript is not in the term
-           */
-          
-          terms[i].ct_codes[k] = factors[k].nlevels;
-        }  
-      }
-      terms[i].ct_codes[nfactors] = replicates;
-    }  
-    
-    /*
-     * Now check wich components contribute to the MS
-     * of each term, including the "Error"
-     */
-
-    let tl = terms.length - 1;
-    for ( let i = 0; i < tl; i++ ) {
-        
-      /*
-       * 'i' is the 'current' component term and should be checked 
-       * against all other component terms
-       */
-      
-      for ( let j = 0; j <tl; j++ ) {
-        
-        /*
-         * 'j' is the component term being compared
-         * with the current term 'i'
-         */
-        
-        let included = true;
-        for ( let k = 0; k < nfactors + 1; k++) {
-          if ( ( terms[i].codes[k] > 0 ) && ( terms[j].codes[k] == 0) ) {
-            included = false;
-            break;
-          }  
-        }
-        if (included) terms[i].varcomp.push(1); 
-        else terms[i].varcomp.push(0); 
-      }
-    }
-    
-    /* Finally, update the included terms according to the 
-     * multipliers of 'ct_codes'. We can skip the "Error"
-     * term. For each target 'term' denoted by 'i', compare
-     * it with the current 'term', denoted by 'j'. If the 
-     * current 'term' contains all the subscripts of 'i'
-     * the multiplier for this particular source of variation
-     * in the target term is the product of all coeficients
-     * of 'j' excluding those which subscripts are present
-     * in 'i'.
-     */
-    
-    for ( let i = 0; i < tl; i++ ) {
-      for ( let j = 0; j < tl; j++) {
-        if( terms[i].varcomp[j] == 1 ) {
-          let product = 1;
-          for ( let k = 0; k < nfactors + 1; k++) {
-            if ( terms[i].codes[k] == 0 ) {
-              product *= terms[j].ct_codes[k]; 
-            }  
-          }
-          terms[i].varcomp[j] = product;
-        }  
-      }    
-    }
-    
-    /* 
-     * Now check what are the denominators of the F tests.
-     * For each term (excluding the "Error" and "Total"
-     * compare them with all others
-     */ 
-    
-    tl = terms.length;
-    
-    for ( let i = 0; i < tl - 2; i++ ) {
-      
-      /*
-       * for each term 'i' start from the bottom
-       * and check if the 'varcomp' of term 'j'
-       * has all the components of 'varcomp' for
-       * term 'i' except for 'i' itself
-       */
-      
-      //console.log("For " + terms[i].name)
-      for ( let j = tl - 2; j >= 0; j-- ) {
-        //console.log("  Compare with " + terms[j].name)
-        let found = true;
-        if (i != j ) {
-          for ( let k = 0, vl = terms[i].varcomp.length; k < vl; k++ ) {
-            if (k != i) {
-              if ( terms[i].varcomp[k] != terms[j].varcomp[k] ) {
-                found = false 
-                break;
-              }
-            }
-          }
-        } else {
-          found = false;
-        }  
-        if (found) {
-          terms[i].against = j;
-          terms[i].F = terms[i].MS/terms[j].MS;
-          terms[i].P = 1 - jStat.centralF.cdf(terms[i].F, terms[i].df, terms[j].df);
-          break;
-        } else {
-          terms[i].against = -1;
-          terms[i].F = NaN;
-          terms[i].P = NaN;      
-          
-        }  
-      }  
-    }  
-    
-    displayCTRules();
-  }
-  
-  /*************************************************************************/
-  /*                                                                       */
-  /*                             setAlpha                                  */
-  /*                                                                       */
-  /* This function sets/changes the rejection criterion (alpha) for the    */
-  /* ANOVA by reading the provided value in the <input> tag with 'id'      */
-  /* 'alpha'. The only effect is to render any statistical tests with      */
-  /* probabilities smaller than 'rejection_level' in italics, to identify  */
-  /* them from non-significant tests                                       */
-  /*                                                                       */
-  /*************************************************************************/
-  
-  function setAlpha() {
-    rejection_level = parseFloat(document.getElementById('anova_alpha').value);
-    if(rejection_level > 1) rejection_level = 0.9999999;
-    if(rejection_level < 0) rejection_level = 0.0000001;
-    //console.log(rejection_level)
-    
-    /*
-     * We should redisplay the ANOVA table as some of the
-     * terms may now be statistically significant. Moreover,
-     * multiple tests may also have to be run again...
-     */
-     
-    displayANOVA();
-    
-  }
-  
-  function setMtAlpha() {
-    mt_rejection_level = parseFloat(document.getElementById('mtests_alpha').value);
-    if(rejection_level > 1) rejection_level = 0.9999999;
-    if(rejection_level < 0) rejection_level = 0.0000001;
-    //console.log(mt_rejection_level)
-    
-    /*
-     * We should redisplay the ANOVA table as some of the
-     * terms may now be statistically significant. Moreover,
-     * multiple tests may also have to be run again...
-     */
-    buildMultipleComparisons();
-    multipleTests();
-    //displayANOVA();
-    
-  }
-  /*************************************************************************/
-  /*                                                                       */
-  /* Here, we use the saved data values for each entry in the data list to */
-  /* reset the transformed values.                                         */
-  /*                                                                       */
-  /*************************************************************************/
-
-  function resetData() {
-    
-    let h = document.getElementsByClassName("tabcontent");
-    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
-    
-    max_value = Number.MIN_SAFE_INTEGER;
-    min_value = Number.MAX_SAFE_INTEGER;
-    
-    for( let i = 0; i < data.length; i++ ) {
-      data[i].value = data[i].original;
-      if ( data[i].value > max_value ) max_value = data[i].value;
-      if ( data[i].value < min_value ) min_value = data[i].value;
-    }    
-    
-    for( let i = 0; i < factors.length; i++ ) {
-      factors[i].name = factors[i].orig_name;
-      factors[i].nlevels = factors[i].levels.length;
-      factors[i].nestedin = new Array( nfactors ).fill(0);
-      factors[i].depth = 0;
-    }
-    
-    partials = [];
-    terms    = [];
-    corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
-    residual = {name: "Error", df: 0, ss: 0};
-    nesting = false;
-    
-    displayData();
-        
-    /*
-     * Start the ANOVA by computing 'partials' and then
-     * computing the 'terms' of the analysis
-     */
-        
-    computePartials(); 
-  }
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayFactors                             */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the factors, */
-  /* their types, names and number of levels, derived from the data file   */
-  /*                                                                       */
-  /*************************************************************************/ 
-  
-
-  /*************************************************************************/
-  /*                                                                       */
-  /*                             resetAnalysis                             */
-  /*                                                                       */
-  /* This function clears all 'global' variables of this module (anova)    */
-  /* and also clears the DOM nodes related with the ANOVA                  */
-  /*                                                                       */  
-  /*************************************************************************/    
-  
-  function resetAnalysis() {
-      
-    /*
-     * Clear results in all <divs> of class 'anovaTabContents' which are children
-     * of <div id='anova'>
-     */
-    
-    let s = document.getElementsByClassName('tabcontent')
-    for( let i = 0, len = s.length; i < len; i++) {
-      if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = "";
-    }
-
-    
-    /*
-     * Reset main variables
-     */
-    
-    nfactors = 0;
-    factors  = [];
-    data     = [];
-    partials = [];
-    terms    = [];
-    corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
-    residual = {name: "Error", df: 0, ss: 0};
-    nesting = false;
-    max_value = Number.MIN_SAFE_INTEGER;
-    min_value = Number.MAX_SAFE_INTEGER;
-  }
-
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            transformData                              */
-  /*                                                                       */
-  /* This function applies several possible transformations to data values */
-  /* but keeps original data for any possible reset. Transformations are   */
-  /* applied sequentially, thus "memorizing" previous transformations.     */
-  /* Hence, transforming data using the fourth root is equivalent to apply */
-  /* the square root transformation twice.                                 */
-  /*                                                                       */
-  /*************************************************************************/ 
-
-  function transformData() {
-      
-    let t = document.getElementsByName("transf");
-    let multc = parseFloat(document.getElementById("multc").value);
-    let divc  = parseFloat(document.getElementById("divc").value);
-    let powc  = parseFloat(document.getElementById("powc").value);
-    //console.log(multc,divc,powc);
-    max_value = Number.MIN_SAFE_INTEGER;
-    min_value = Number.MAX_SAFE_INTEGER;
-    
-    let transf = 0;
-    for( let i = 0; i < t.length; i++ ) {
-      if( t[i].checked ) {
-        transf = i;
-        break;
-      }  
-    }    
-
-    for( let i = 0; i < data.length; i++ ) {
-      let v = data[i].value;
-      //let text = i.toString() + ' ' + v.toString();
-      switch(transf){
-          case 1:
-            if( v >= 0 ) v = Math.sqrt(v);  
-            break;  
-          case 2:
-            v = Math.pow(v, 1/3);
-            break;
-          case 3:
-            v = Math.pow(v, 0.25);
-            break;  
-          case 4:
-            if( v >= 0 ) v = Math.log(v+1)/Math.log(10);
-            break;
-          case 5:
-            if( v >= 0 ) v = Math.log(v+1);
-            break;
-          case 6:
-            if( (v >= 0) && ( v <= 1 ))v = Math.asin(v);
-            break;  
-          case 7:
-            v *= multc;
-            break;  
-          case 8:
-            if( divc != 0 ) v /= divc;
-            break;  
-          case 9:
-            v = Math.pow(v, powc);
-            break;    
-      }
-      //text += ' ' + v.toString();
-      //console.log(text)
-      
-      data[i].value = v;  
-      if ( v > max_value ) max_value = v;
-      if ( v < min_value ) min_value = v;
-    }    
-    
-    let h = document.getElementsByClassName("tabcontent");
-    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
-    
-    for( let i = 0; i < factors.length; i++ ) {
-      factors[i].name = factors[i].orig_name;
-      factors[i].nlevels = factors[i].levels.length;
-      factors[i].nestedin = new Array( nfactors ).fill(0);
-      factors[i].depth = 0;
-    }
-    
-    partials = [];
-    terms    = [];
-    corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
-    residual = {name: "Error", df: 0, ss: 0};
-    nesting = false;
-    
-    displayData();
-    
-    /*
-     * Restart the ANOVA by computing 'partials' 
-     */
-    
-    computePartials(); 
-
-  }
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayANOVA                               */
-  /*                                                                       */
-  /* This function displays a table with the Analysis of Variance          */
-  /*                                                                       */     
-  /*************************************************************************/   
-  
-  function displayANOVA() {
-       
-    let text = '<div class="ct"><table>' +
-                '<thead><tr><th>Source</th><th>SS</th><th>df</th><th>MS</th><th>F</th>' +
-                '<th>Prob.</th><th>Against</th></tr></thead><tbody>';
-     
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      text += "<tr>";
-      text += "<td>" + terms[i].name + "</td>";
-      text += "<td>" + terms[i].SS.toFixed(5).toString() + "</td>";
-      text += "<td>" + terms[i].df.toString() + "</td>";
-      if( terms[i].name != "Total" ) {
-        text += "<td>" + terms[i].MS.toFixed(5).toString() + "</td>";
-      } else {
-        text += "<td></td>";  
-      } 
-      let nm = terms[i].against;
-      if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += "<td>" + terms[i].F.toFixed(5).toString() +"</td>";
-        let prob = "";
-        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(5).toString();
-        else prob = "<b><i>" + terms[i].P.toFixed(5).toString() + "</i></b>";     
-        text += "<td>" + prob + "</td>";
-        text += "<td>" + terms[nm].name + "</td>";
-      } else {
-        text += "<td></td>";
-        text += "<td></td>";
-        if ( nm == -1) text += "<td><b>No Test</b></td>";
-        else text += "<td></td>";
-      }  
-      text += "</tr>";
-    }
-    text += '</tbody></table></div>';
-    
-    text += '<div class="ct"><p>Rejection criteria (&alpha;):</p>'+
-             '<p><input type="number" id="anova_alpha" value="' +
-             rejection_level.toString() + 
-             '" min="0.00000" max="0.999999" step="0.1" onchange="anova.setAlpha()"/></p>' +
-             '</div>';
-
-    /*
-     * Update contents of 'display' tab (ANOVA results)
-     */
-    
-    let d = document.getElementById('analysis');
-    d.innerHTML = text; 
-    
-    /*
-     * Select ANOVA results tab ('analysis') using ui function 'select
-     * hidding all other tabs
-     */
-    
-    selectTab('analysis');
-        
-  }  
 
 
   /*************************************************************************/
@@ -952,873 +414,363 @@ var anova = (function () {
     
   }
   
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayPartials                            */
-  /*                                                                       */
-  /* This function displays a table with the list of 'partials'. Each      */
-  /* partial represents a unique combination between levels of every factor*/
-  /* present, and contains the accummulated sums of all observations       */
-  /* ('sumx'), and sums of all squared observations ('sumx2)               */
-  /*                                                                       */     
-  /*************************************************************************/ 
   
- 
   /*************************************************************************/
   /*                                                                       */
-  /*                        correctTermNames                               */
+  /*                            buildTerms                                 */
   /*                                                                       */
-  /* After correcting for nesting, by pooling terms with similar           */
-  /* uncorrected sums of squares ('ss'), the names of the terms should be  */
-  /* changed to denote the nesting hierarchy. A term X nested into a term  */
-  /* Y should be named X(Y). A term X nested into an interaction of terms  */
-  /* Y and Z should be named X(Y*Z). After correcting the names the dfs    */
-  /* of nested factors or interactions involving them should also be       */ 
-  /* corrected.                                                            */ 
+  /* This function builds the list of terms of any ANOVA with N factors.   */
+  /* First it computes all possible combinations of factors as if a fully  */
+  /* factorial ANOVA is being made. Then a check for nesting of factors    */
+  /* is made and if any factor is found to be nested into another factor   */
+  /* or into an interaction, a correction is made by accummulating the     */
+  /* appropriate sums of squares, degrees of freedom, averages, levels,    */
+  /* and factor name's notation, and removing the edundant term from the   */
+  /* list                                                                  */
   /*                                                                       */ 
-  /*************************************************************************/ 
-  
-  function correctTermNames() {
-      
-    /*
-     * For factors that are nested into others, correct the nesting depth 
-     * (number of factors where it is nested into, i.e. number of 'nestedin' 
-     * codes equal to one (1)). Take this opportunity to correct the levels 
-     * of nested factors. Usually the number of levels as computed from the 
-     * data file is much larger than the actual number of levels, and is 
-     * computed by dividing the observed levels by the number of levels of 
-     * factors where the nested factor is nested into. 
-     */
-    
-    for ( let i = 0; i < nfactors; i++ ) {
-      for ( let j = 0; j < nfactors; j++ ) {
-        if( factors[i].nestedin[j] == 1 ) {
-          factors[i].depth++;
-          factors[i].nlevels /= factors[j].nlevels;  
-        }
-      }
-    }    
-    
-    /*
-     * Now, correct the names of the factors according to the nesting hierarchy. 
-     * To do this we need to build a list of terms ordered by their nesting depth 
-     * (i.e. how many factors/interactions are they nested in) in ascending order
-     * (lower depths first). This is necessary because we cannot mess with the 
-     * order of the 'factors' and 'terms' arrays: the first factor in array 
-     * 'factors' (index 0) should correspond to the first term in array 'terms'
-     * (with a similar index of 0), and so on. The list will only contain terms
-     * which are nested into others
-     */
-    
-    let nfl = [];
-    
-    for (let i = 0; i < nfactors; i++) {
-      let nested = factors[i].depth; 
-      if ( nested > 0 ) {
-        let f = {};
-        f.index = i;
-        f.codes = factors[i].nestedin;
-        f.depth = factors[i].depth;
-        f.name = factors[i].name;
-        nfl.push(f);
-      }  
-    }
-    
-    /*
-     * Sort nested factors from lowest nesting depths to highest nesting depths
-     */
-    
-    nfl.sort(function(a,b){return a.depth - b.depth; });
-    
-    
-    /*
-     * Eliminate redundant codes, i.e. those that are associated
-     * with a factor which is already nested into another. As an
-     * example consider the following 4 factor ANOVA in which 
-     * factor B is nested in A, and factor C ins nested in A and B
-     *
-     * i  Factor nestedin   depth
-     * 0  A      [0,0,0,0]  0 
-     * 1  B      [1,0,0,0]  1
-     * 2  C      [1,1,0,0]  2
-     * 3  D      [0,0,0,0]  0
+  /*************************************************************************/  
+
+  function buildTerms() { 
+        
+            
+    /*     
+     * Construct a list of 'terms' (denoting either main factors or interactions) 
+     * assuming that a fully orthogonal analysis is being done. The number of 
+     * terms of any fully orthogonal design is given by 
      * 
-     * For factor C, nesting in A is redundant because B (in which
-     * it nested) is itself nested in A. The 'nestdin' for C should
-     * be [0,1,0,0]. Why? Because the name for B will be replaced
-     * by B(A) (its depth is 1, so this is done before renaming C,
-     * which depth is 2). Now when we replace factor names in C, 
-     * there is only one to be replaced (B) and the term will be
-     * named C(B(A))
-     *
-     * Now, suppose now that C is nested in the interaction A*B instead
-     * (hence B would not be nested in A, since nested factors do not
-     * created interactions with the factors where they are nested in).
-     * The codes would be
-     *
-     * i  Factor nestedin   depth
-     * 0  A      [0,0,0,0]  0 
-     * 1  B      [0,0,0,0]  0
-     * 2  C      [1,1,0,0]  2
-     * 3  D      [0,0,0,0]  0    
-     *
-     * There are no redundancies in this set, and the name of C would
-     * become C(A*B)
+     * 2^n 
+     * 
+     * where n is the number of factors involved 
+     * 
+     * Note that the formula includes the empty element {} and all possible 
+     * combinations of factors ignoring their order. For example, for a 
+     * set with three factors {A,B,C} the total number of terms is given by 
+     * 
+     * 2^3 = 8 
+     * 
+     * which are
+     * 
+     * {}, {A}, {B}, {C}, {AB}, {AC}, {BC}, {ABC} 
+     * 
+     * Note that {BA}, {CA}, {CB}, {ACB}, {BCA}, {BAC}, {CAB}, and {CBA}
+     * are not included as the order does not matter
+     */
+ 
+    let s = Math.pow(2, nfactors);
+    
+    /*
+     * Now create all combinations of factors, one in each iteration,
+     * but exclude i = 0 which corresponds to the empty set {}
      */
     
-    for (let i = 0, len = nfl.length; i < len; i++) {
-      
+    for( let i = 1; i < s; i++ ) {
+        
+      let temp = { idx: 0, name: "", codes: [], order: 0, combins: 1, nlevels: 0,
+                   levels: [], sumx: [], sumx2: [], n: [], average: [], ss: 0,
+                   df: 1, SS: 0, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -1, 
+                   F: 0 };
+                   
+      for( let j = 0; j < nfactors; j++ ) {
+          
+        /*
+         * Unfortunately, we need an additional attribute 'idx' to keep the order of
+         * creation of the terms. The order will be: 
+         * idx : term
+         * -----------
+         * 0   : A 
+         * 1   : B
+         * 2   : A*B
+         * 3   : C
+         * 4   : A*C
+         * ...
+         * Note that the fourth term (idx = 3) is a main factor ('C'), but it is 
+         * created after the interaction A*B. Later on, the list of terms of the ANOVA 
+         * should be sorted according to the 'order' of terms (1 - for main factors, 
+         * 2 - for 1st order interactions, 3 - for second order interactions, and so on). 
+         * However, two terms may have the same 'order' (for example, both are first
+         * order interactions, and their 'order' is 2). In these cases, we need to have 
+         * a way to sort them according to the order they were created during the reading 
+         * stage of data. This is particularly important for terms denoting the main 
+         * factors. If their order differs from the the order in which main factors 
+         * were created during the reading stage of data (see 'factors') problems will 
+         * occur because the 'codes' property of 'terms' and 'partials' lists expects 
+         * that the order of the main factors is the same as in the 'factors' array
+         */
+        
+        temp.idx = i;  
+        if( (i & Math.pow(2,j)) ) {
+          temp.codes[j] = 1;
+          temp.order++;
+          temp.combins *= factors[j].nlevels;
+        } else {
+          temp.codes[j] = 0;
+        }
+        
+        /*
+         * Insert one more code for the "Error" to all terms
+         */
+        
+        temp.codes.push(0);
+      }
+      terms.push(temp);
+    }
+    
+    
+    
+    /*
+     * Compute the 'partials' list, i.e., a list with all terms potentially
+     * included in an ANOVA.
+     */
+    
+    if( getPartialSS() ) {
+        
       /*
-       * No need to check for redundancies in factors that
-       * are nested into a single one  
+       * Sort 'terms' by ascending 'terms[].order'. Note that if the terms 'order' 
+       * is the same for two or more terms we resort to their 'idx' attribute to 
+       * keep the correct order. This is only important for main factors 
+       * (terms[].order == 1) because their order should be the same as for the 
+       * 'factors[]' order 
        */
       
-      if(nfl[i].depth > 1) { 
-        for (let j = 0, len = nfl.length; j < len; j++) {
-          if ( ( i != j ) && ( nfl[j].depth < nfl[i].depth ) ) { 
-            for (let k = 0; k < nfactors; k++ ) {
-              if ( ( nfl[i].codes[k] == 1 ) && ( nfl[j].codes[k] == 1 ) ) {
-                let f = nfl[j].index;
-                if (nfl[i].codes[f] == 1) nfl[i].codes[k] = 0; 
-              } 
-            }  
-          }  
-        }
-        let nm = [];
-        let j = nfl[i].index;
-        for (let k = 0; k < nfactors; k++ ) {
-          if( nfl[i].codes[k] == 1 ) nm.push(factors[k].name);  
-        }
-        factors[j].name += "(" + nm.join("*") + ")";
-      } else {
-        let j = nfl[i].codes.indexOf(1);
-        let k = nfl[i].index;
-        if ( j != -1 ) factors[k].name += "(" + factors[j].name + ")";   
-      }  
-    }
-   
-    /*
-     * Finally, replace the new names in all terms. Note that the two 
-     * last terms are the Error and the Total, so skip them!
-     */
-    
-    for (let i = 0, len = terms.length - 2; i < len; i++) {
-      let nm = [];
-      for ( let j = 0; j < nfactors; j++) {
-        if (terms[i].codes[j] == 1 ) {
-          nm.push(factors[j].name);   
-        } 
-      }
-      terms[i].name = nm.join("*");
-    }
-    
-    //console.table(terms);
-  }
-  
-
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayAverages                            */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the averages */
-  /* for each term in the ANOVA. This information may be useful to graph   */
-  /* data further on or simply to check if the analysis has ben correctly  */
-  /* done.                                                                 */
-  /*                                                                       */
-  /*************************************************************************/ 
-  
-  function displayAverages() {
-        
-    let d = document.getElementById('averages'); 
-    
-    // Create the table as a whole text bunch of HTML to avoid
-    // multiple calls to the DOM structure
-  
-    let table = '';
-    
-    for(let i = 0, len = terms.length - 2; i < len; i++ ) {
+      terms.sort( function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
+      
+      /*
+       * Recompute MSs and dfs for all terms. Do not do this for the "Error" and 
+       * the "Total" because their SS and df are already computed.
+       */
        
-      table += '<h3>Averages for ' + terms[i].name + '</h3>'; 
-      
-      table += '<table><thead><tr>';
-      
-      let cds = [...terms[i].codes];
-      for(let j = 0, jlen = cds.length; j < jlen; j++ ) {
-        if( cds[j] != 1 ) cds[j] = '-'; 
-        else table += '<th>' + factors[j].name + '</th>';
-      }  
-      
-      table += '<th>Average</th><th>n</th><th>St. Dev.</th><th>Variance</th></tr></thead><tbody>'; 
-      
-      for(let j = 0, jlen = terms[i].average.length; j < jlen; j++ ) { 
-        table += '<tr>';  
-        let levs = terms[i].levels[j].split(',');
-        for(let k = 0, klen = levs.length; k < klen; k++ ) {
-          if( cds[k] == 1 ) {
-            table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
+      for ( let i = 0, len = terms.length - 2; i < len; i++ ) {
+        if( terms[i].order == 1 ) {
+          terms[i].df = factors[i].nlevels - 1;
+        } else {
+          let m = 1;
+          for ( let j = 0; j < nfactors; j++ ) {
+            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1; 
           }  
+          terms[i].df = m;
         }
-        table += '<td>' + terms[i].average[j].toString() + '</td>';
-        let n = parseInt(terms[i].n[j]);
-        table += '<td>' + n.toString() + '</td>';
-        
-        let std = 0, variance = 0;
-        if( n > 1 ) variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
-        std = Math.sqrt(variance,2);
-        
-        table += '<td>' + std.toString() + '</td>';
-        table += '<td>' + variance.toString() + '</td>';
-        table += '</tr>'; 
+        terms[i].MS = terms[i].SS/terms[i].df;
       } 
-      table += '</tbody></table>';
-    }
-    d.innerHTML = table;
-  }
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayAverages                            */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the averages */
-  /* for each term in the ANOVA. This information may be useful to graph   */
-  /*                                                                       */
-  /*************************************************************************/ 
-  
-  function displayMultipleComparisons() {
         
-    let d = document.getElementById('mtests'); 
-    
-    // Create the text as a whole bunch of HTML to avoid
-    // multiple calls to the DOM structure
-    
-    /*
-     * Provide two <divs>: one for selecting the type of test and the other
-     * to display the results of the multiple tests, identified by the
-     * id = 'mtest_results', but invisible (style="display:none") for now. 
-     */
-    
-    let text = '<div class="ct">' +
-            '<h3>Multiple Comparison Tests</h3>' +
-            '<p><input type="radio" name="test" value="none" checked>None</p>' +
-            '<p><input type="radio" name="test" value="snk">Student-Newman-Keuls (SNK)</p>' +
-            '<p><input type="radio" name="test" value="tukey">Tukey (HSD)</p>' +
-            '<p>Rejection criteria (&alpha;): <input type="number" id="mtests_alpha" value="' +
-             mt_rejection_level.toString() + 
-             '" min="0.00000" max="0.999999" step="0.01" onchange="anova.setMtAlpha()"/></p>' +
-             '<p><button onclick="anova.multipleTests()">Compute</button></p>' +
-            '</div>' +
-            '<div class="ct" id="mtest_results" style="display: none;"></div>';
-    
-    d.innerHTML = text;
-  }
-  
-  /*************************************************************************/
-  /*                                                                       */
-  /*                             openDataFile                              */
-  /*                                                                       */
-  /* Function used to open a data file. It clears the contents of the DOM  */
-  /* that are related with the Analysis of Variance. It also resets the    */
-  /* global variables for the new analysis.                                */
-  /*                                                                       */
-  /*************************************************************************/
-
-  function openDataFile() {
-      
-    /*
-     * Grab the file object
-     */
-    
-    let selectedFile = document.getElementById('loadFile').files[0];
-    
-    if(typeof(selectedFile) === 'undefined') return;
-    
-    /*
-     * Set the mimetype of files to be read as 'text.*'
-     */
-    
-    let textType = /text.*/;
-    
-    if ( selectedFile.type.match( textType ) ) {
-        
-      filename = selectedFile.name;
-      
-      let h = document.getElementById('filename');
-      
-      h.innerHTML = 'Current selected file is <b>' + filename + '</b>';   
-      
       /*
-       * Clean any global variables used in previous analysis
+       * The df for the "Error" is already computed so we don't overwrite it. 
+       * Instead we compute its MS
        */
       
-      resetAnalysis();
+      let e = terms.length - 2;
+      terms[e].MS = terms[e].SS/terms[e].df;
       
-      /*
-       * Create a new reader and set its property 'onload'
-       * to parse the data file 
-       */
-      
-      let reader = new FileReader();
-      
-      /*
-       * Define the function used for 'onload' (i.e., the
-       * fcunction that actually reads the values from the 
-       * data file selected)
-       */
-      
-      reader.onload = function(e) {
-        let header = true;
-        let text   = reader.result;
-        let lines  = text.split('\n');
-        for( let i = 0, len = lines.length; i < len; i++ ) {
-            
-          // Trim the line 
-            
-          let li = lines[i].trim();
-          
-          /*
-           * Check if the line is commented (starts with '#') or if
-           * it is an empty line. If so, ignore it!
-           */
-          
-          if( ( li[0]!=='#' ) && ( li.length !== 0 ) ) {
-              
-            /*
-             * Split the line using spaces or tabs
-             */
-            
-            li = li.split(/[\s\t]+/); 
-            
-            /*
-             * Check if we are reading the first valid line, 
-             * which should be the header with the names of 
-             * the factors
-             */
-            
-            if( header ) {
-                
-              /*
-               * Number of factors is equal to the number of columns
-               * in the data file minus the data column which is usually
-               * named 'DATA' and should be the last column
-               */
-              
-              nfactors = li.length - 1;
-              
-              for( let j = 0, k = li.length - 1; j < k; j++ ) {
-                factors[j] = {};
-                let name = li[j];
-                
-                /*
-                 * Factor names ending in '*' are of type 'RANDOM',
-                 * otherwise they are of type 'FIXED'
-                 */
-                
-                if( name.endsWith( "*" ) ) {
-                  factors[j].type = RANDOM;
-                  name = name.slice( 0, name.length-1 );
-                } else {
-                  factors[j].type = FIXED;
-                }
-                factors[j].name = name;
-                factors[j].orig_name = name;
-                factors[j].nlevels = 0;
-                factors[j].levels = [];
-                factors[j].nestedin = new Array( nfactors ).fill(0);
-                factors[j].depth = 0;
-                
-                /*
-                 * Compute the subscript for the current factor
-                 * starting in 'i' (the first factor) which has
-                 * ASCII charcode 105. This will be needed in 
-                 * the CT Rules procedure later on...
-                 */
-                
-                factors[j].subscript = String.fromCharCode( j + 105 );
-              }   
-              
-              /*
-               * The header was read. All subsequent lines will be 
-               * point observations (values) preceded by their 
-               * respective level codes per factor (each factor
-               * will be in a different column). Set variable
-               * 'header' to false so that next time we jump to
-               * the part that parses values and level codes
-               */
-              
-              header = false; 
-              
-            } else {
-                
-              /*
-               * First check if this line has the same number of elements 
-               * of the header line. If not, abort, because something is 
-               * missing...
-               */
-              
-              if( li.length != nfactors + 1 ) {
-                let ln = i + 1;
-                let c = li.length.toString();
-                let ec = nfactors + 1;
-                alert('In line ' + ln.toString() + ' number of columns (' + c + 
-                      ') is different from what is expected (' + e.toString() + ')');
-                return;
-              }
-              
-              /*
-               * Create a new object to hold the new observation
-               * corresponding to the line being parsed. 
-               * This object will hold the classification criteria
-               * for each data observation, i.e. the level codes 
-               * per each factor. Moreover, it will also hold the
-               * oserved data value into two separate variables: 
-               * 'value' and 'original'. The latter will allow 
-               * resetting the analysis to the original values 
-               * after susbsequent transformation of the data, 
-               * thus avoiding reading the data file again!
-               */
-              
-              let d = {};
-              d.levels = [];
-              for( let j = 0; j < nfactors; j++ ) {
-                  
-                /*
-                 * Read factor level codes for this observation 'li[j]' 
-                 * and check if these level codes are already present 
-                 * in 'factors[].levels' array. If not, add them and 
-                 * increase 'factors[].nlevels' accordingly
-                 */
-                
-                let p = factors[j].levels.indexOf( li[j] );
-                
-                /*
-                 * indexOf return -1 if the argument is not in the array
-                 */
-                
-                if(p == -1 ) {
-                  factors[j].levels.push( li[j] );
-                  factors[j].nlevels++;   
-                }
-                
-                /*
-                 * Add this level to data's new observation 'd'
-                 */
-                
-                d.levels.push( li[j] );
-              }
-              
-              /*
-               * Read the data value. It should be the last column
-               * of the line, which is equivalent 'li[nfactors]' 
-               * because array indexes start on 0!
-               */
-              
-              let n = +li[nfactors].replace( ",", "." );
-              let a = Number.parseFloat(n);
-              if(Number.isNaN(a)) {
-                let ln = i + 1;
-                alert('In line ' + ln.toString() + ' data value (' + n.toString() + ') is not a valid number!');
-                return;
-              } else {  
-                d.value    = n;
-                d.original = n;
-                
-                /*
-                 * The following limits are important to determine 
-                 * what types of transformation are applicable to 
-                 * the data: e.g. arcsin() transformation should 
-                 * only be applied to data ranging from 0 to 1!
-                 */
-                
-                if ( n > max_value ) max_value = n;
-                if ( n < min_value ) min_value = n;
-              }
-              
-              /*
-               * Insert new observation in array 'data'
-               */
-              
-              data.push( d );
-            }  
-          }  
-        }
-        
-        /*
-         * Enable all anova tabs as a file was successfully read
-         */
-        
-        let elem = document.getElementsByClassName("tabcontent");
-        for ( let i = 0, len = elem.length; i < len; i++ ) elem[i].innerHTML="";
-        
-        
-        displayData();
-        
-        /*
-         * Start the ANOVA by computing 'partials' 
-         */
-        
-        computePartials(); 
-        
-      }
-      
-      reader.readAsText( selectedFile );
 
       /*
-       * Reset the file input object so that reloading the same file works!
+       * Check if there are nested factors and correct the
+       * ANOVA terms if necessary
        */
       
-      document.getElementById('loadFile').value = "";
+      correctForNesting();
       
-    } else {
-      alert('File type of ' + filename + ' not supported by your browser.');
-    }
+      
+      /*
+       * Compute Cornfield-Tukey rules to determine
+       * denominators for the F-tests
+       */
+      
+      computeCTRules();
+      
+      
+      /*
+       * Display tables of averages per factor or combinations of factors
+       */
+      
+      displayAverages();
+      
+      /*
+       * Build the list of multiple comparisons, if any available
+       */
+      
+      buildMultipleComparisons();
+      
+      /*
+       * Display the tab with multiple comparisons if any is selected
+       */
+      
+      displayMultipleComparisons();
+        
+      /*
+       * Finally display the ANOVA table
+       */
+      
+      displayANOVA();
+    }  
   }
 
   
 
-  function studentizedComparisons(test, fact, df, ms, avgs) {
-    //console.log(avgs)  
-    let t = "";
-    let comps = [], p = 0;
-    //t += '<p>' + fact.toString() + ' ' + df.toString() + ' ' + ms.toString() +'</p>';
-    let total_range = avgs.length;
-    let range = total_range;
-    do {
-      let times = total_range - range + 1; 
-      for( let i = 0; i < times; i++ ) {
-        let j = i + range - 1;
-
-        //console.log('Compare level ' + avgs[i].level + ' against level ' + avgs[j].level);
-        
-        let q = Math.abs(avgs[i].average - avgs[j].average)/Math.sqrt( ms / avgs[i].n );
-        if(test == 'tukey') p = 1 - jStat.tukey.cdf(q, total_range, df);
-        if(test == 'snk')   p = 1 - jStat.tukey.cdf(q, range, df);
-        
-        if( p > mt_rejection_level ) {
-          let included = false;
-          for( let k = 0, kl = comps.length; k < kl; k++ ) { 
-            if( ( i >= comps[k][0] ) && (j <= comps[k][1]) ) {
-              included = true;
-              break;
-            }    
-          }
-          if(!included) {
-            //comps.push({a1: i, a2: j, q: q, p: p});   
-            comps.push([ i, j ]);  
-            //t += '<p>' + i.toString() + ' == ' + j.toString() + '</p>';  
-            //t += '<p>' + avgs[i].level + ' = ' + avgs[j].level + '    <i>(' + i.toString() + ' = ' + j.toString() + ')</i></p>'; 
-            //console.log(q,p); 
-          }  
-        }
-        //console.log(q,p); 
-      }
-      range--;  
-    } while(range > 1);
-    
-    /*
-     * Check wich levels of the target factor fall outside the homogeneous
-     * groups in 'comps' and add them to the list.
-     */
-    
-    for( let i = 0, il = avgs.length; i < il; i++ ) {
-      let included = false;  
-      for ( let j = 0, jl = comps.length; j < jl; j++) {
-        if( ( i >= comps[j][0] ) && ( i <=  comps[j][1] ) ) {
-          included = true;
-          break;
-        }    
-      }    
-      if( !included ) {
-        comps.push([i, i]);  
-      }    
-    }    
-    
-    comps.sort((a, b) => (a[0] >  b[0])? 1 : -1); 
-    
-    //console.log(comps)
-    
-    t += '<table>';
-    t += '<tr><th>Level</th><th>Average</th><th>n</th>';
-    for( let i = 0, il = comps.length; i < il; i++ ) t += '<th>&nbsp;</th>';
-    t += '</tr>';
-    for( let i = 0, il = avgs.length; i < il; i++ ) {
-      t += '<tr><td>'+avgs[i].level+'</td><td>'+avgs[i].average.toString()+'</td><td>'+avgs[i].n.toString()+'</td>';
-      for(let j = 0, jl = comps.length; j < jl; j++) {
-        if(( i >= comps[j][0] ) && (i <= comps[j][1])) t += '<td>&#9679;</td>';
-        else t += '<td>&nbsp;</td>';
-      }
-      t += '</tr>'; 
-    }    
-    t += '</table>';
-    return t;
-  }    
-
-
-  function multipleTests() {
-    
-    //console.log(mcomps)
-      
-    /*
-     * studentized range statistics. Student Newman Keuls, Tuket, Duncan are
-     * all based on studentized range Q. 
-     */  
-    
-    let studentized = ['snk', 'tukey', 'duncan'];
-    
-    /*
-     * Grab the <select> element which holds the type of multiple test 
-     * to apply which is denoted by id='test'
-     */
-    
-    let elem = document.getElementsByName("test");
-    
-    let testName = 0;
-    for( let i = 0; i < elem.length; i++ ) {
-      if( elem[i].checked ) {
-        testName = elem[i].value;
-        break;
-      }  
-    } 
-    
-    /*
-     * use 'elem' to point to a <div> which will hold the results
-     * of the multiple tests (id='mtest_results')
-     */
-    
-    elem = document.getElementById("mtest_results"); 
-    
-    /*
-     * If the selection is not 'None' (index 0)...
-     */
-    
-    if( testName != 'none' ) {
-      let text = "";
-      
-      for(let i = 0, len = mcomps.length; i < len; i++ ) {
-       
-        let dferr = mcomps[i].df_against,
-            mserr = mcomps[i].ms_against,
-            fcode = mcomps[i].fcode;
-            
-        /*
-         * Display a header for the multiple comparison
-         */
-        
-        text += '<h3>Multiple comparisons for levels of factor ' + mcomps[i].fname;
-        if(mcomps[i].type == 'interaction') text += ' within levels of ' + mcomps[i].term + '</h3>';
-        else text += '</h3>'; 
-         
-        /*
-         * Go along the whole list of comparisons for this term. It may be just
-         * a single test if 'mcomps' is of type 'factor' (involves comparisons
-         * between multiple averages), or it can be a series of tests, one for
-         * each combination of levels of facto.rs whith which the one being 
-         * compared interacts with
-         */
-        
-        for(let a in mcomps[i].averages) {
-            
-          /*
-           * Check if this is an interaction. If so, specify the combination
-           * of levels of interacting factors within which multiple tests are
-           * being carried for factor 'mcomps[i].fcode'. The 'key' for the
-           * 'mcomps[i].averages[]' array holds the combination of levels
-           * involved with '-' for factors not included in the interaction
-           * or the target factor itself.
-           */
-
-          if( mcomps[i].type == 'interaction' ) {
-            let f = a.split(',');
-            //console.log(f);
-            let t = [];
-            for(let j = 0, jlen = f.length; j < jlen; j++ ) {
-              if( f[j] != '-' ) {  
-                t.push('level <i>' + factors[j].levels[f[j]] + '</i> of factor ' + factors[j].name);
-              }
-            }
-            text += '<h4>For ' + t.join(' and ') + '</h4>';
-          }    
-
-          /*
-           * Check if the multiple test is of type 'studentized range'
-           */
-          
-          if( studentized.indexOf(testName) != -1 ) {
-            text += studentizedComparisons(testName, fcode, dferr, mserr, mcomps[i].averages[a] );  
-          }  
-        }    
-      }
-
-      if( text == "" ) text="<h3>No multiple tests available!</h3>Are you sure there are significant differences in fixed factors?";
-      elem.innerHTML = text;
-      elem.style.display = 'inline-block';
-      
-        
-    } else {
-      elem.innerHTML = "";  
-      elem.style.display = 'none';
-    }    
-
-  }
-   
+  
   /*************************************************************************/
   /*                                                                       */
-  /*                        correctForNesting                              */
+  /*                            computeCTRules                             */
   /*                                                                       */
-  /* A factor can be nested in another factor or in an interaction of two  */
-  /* or more factors. This function checks if the uncorrected sums of      */
-  /* squares of a pair of terms is the same. In this case, if one of the   */
-  /* terms denote a single factor (the other denoting an interaction where */
-  /* this factor is involved) it means that the single factor is nested    */
-  /* into any other factor participating in the interaction. If the        */
-  /* interaction is of first order (two factors involved) the nesting      */
-  /* factor is mandatorily the one which is not designated by the term     */
-  /* that denotes a single factor. For complex designs, for example, those */
-  /* with factors nested into interactions, the process is more tricky.    */
-  /* See detail within the function.                                       */
+  /* This function computes Cornfield-Tukey Rules that will determine the  */
+  /* denominators of the F statistics in any ANOVA scenario. For a fully   */
+  /* orthogonal ANOVA with fixed factors, the denominator for all tests is */
+  /* the Error term. For mixed or more complex models the denominator      */
+  /* changes according to the CT rules                                     */
   /*                                                                       */ 
-  /*************************************************************************/ 
-  
-  function correctForNesting() {
+  /*************************************************************************/
+
+  function computeCTRules() {
+    
+    /*
+     * Build the table of multipliers for all terms
+     * Skip the last two terms. The "total" is not necessary
+     * and the ct_codes for the "Error" are already computed
+     * [1,1,...,1] for all factors
+     */
+      
+    for ( let i = 0, tl = terms.length - 2; i < tl; i++ ) {
+      terms[i].ct_codes = new Array(nfactors+1).fill(0);
+      for ( let k = 0; k < nfactors; k++ ) {
+        let t = terms[i].codes[k];
+        if( t != 0 ) {
+            
+          /*
+           * subscript is in the term
+           */
+          
+          if ( t == 1 ) {
+              
+            /*
+             * it's outside parenthesis
+             */
+            
+            if (factors[k].type === RANDOM) terms[i].ct_codes[k] = 1;
+            else terms[i].ct_codes[k] = 0; 
+          } else {
+              
+            /*
+             * subscript is within parenthesis
+             */
+            
+            terms[i].ct_codes[k] = 1;  
+          } 
+        } else {
+            
+          /*
+           * This subscript is not in the term
+           */
+          
+          terms[i].ct_codes[k] = factors[k].nlevels;
+        }  
+      }
+      terms[i].ct_codes[nfactors] = replicates;
+    }  
+    
+    /*
+     * Now check wich components contribute to the MS
+     * of each term, including the "Error"
+     */
+
+    let tl = terms.length - 1;
+    for ( let i = 0; i < tl; i++ ) {
+        
+      /*
+       * 'i' is the 'current' component term and should be checked 
+       * against all other component terms
+       */
+      
+      for ( let j = 0; j <tl; j++ ) {
+        
+        /*
+         * 'j' is the component term being compared
+         * with the current term 'i'
+         */
+        
+        let included = true;
+        for ( let k = 0; k < nfactors + 1; k++) {
+          if ( ( terms[i].codes[k] > 0 ) && ( terms[j].codes[k] == 0) ) {
+            included = false;
+            break;
+          }  
+        }
+        if (included) terms[i].varcomp.push(1); 
+        else terms[i].varcomp.push(0); 
+      }
+    }
+    
+    /* Finally, update the included terms according to the 
+     * multipliers of 'ct_codes'. We can skip the "Error"
+     * term. For each target 'term' denoted by 'i', compare
+     * it with the current 'term', denoted by 'j'. If the 
+     * current 'term' contains all the subscripts of 'i'
+     * the multiplier for this particular source of variation
+     * in the target term is the product of all coeficients
+     * of 'j' excluding those which subscripts are present
+     * in 'i'.
+     */
+    
+    for ( let i = 0; i < tl; i++ ) {
+      for ( let j = 0; j < tl; j++) {
+        if( terms[i].varcomp[j] == 1 ) {
+          let product = 1;
+          for ( let k = 0; k < nfactors + 1; k++) {
+            if ( terms[i].codes[k] == 0 ) {
+              product *= terms[j].ct_codes[k]; 
+            }  
+          }
+          terms[i].varcomp[j] = product;
+        }  
+      }    
+    }
     
     /* 
-     * No need to check for nesting if there is only one factor,
-     * or if there is no hint on nested factors ('nested' == false). 
-     * The latter is determined in the 'getPartialSS' function
-     * by comparing the observed number of levels of each term
-     * with the expected number of levels given a simple fully
-     * orthogonal analysis.
-     */  
+     * Now check what are the denominators of the F tests.
+     * For each term (excluding the "Error" and "Total"
+     * compare them with all others
+     */ 
     
-    if( ( nfactors == 1 ) || (!nesting) ) return;
+    tl = terms.length;
     
-    /*
-     * Start by denoting the current term by 'current'    
-     */
-    
-    let current = 0; 
-    
-    /*
-     * Skip the two last terms, the "Total" and the "Error" terms!
-     */
-    
-    while(current < terms.length - 2) {
+    for ( let i = 0; i < tl - 2; i++ ) {
       
       /*
-       * Denote the term being compared (target) by 'c'
+       * for each term 'i' start from the bottom
+       * and check if the 'varcomp' of term 'j'
+       * has all the components of 'varcomp' for
+       * term 'i' except for 'i' itself
        */
       
-      let c = current + 1;
-      
-      /*
-       * Skip the two last terms, the "Total" and the "Error" terms!
-       */
-      
-      while (c < terms.length - 2) {
-          
-        // console.log("Comparing " + current.toString() + " with " + c.toString());
-          
-        if( terms[current].ss == terms[c].ss ) {
-            
-          /*
-           * If the uncorrected sums of squares are similar the 'current' term is 
-           * nested into a term involved in term 'c' (which is mandatorly an 
-           * interaction in a fully orthogonal analysis). Now compare the two
-           * terms to find out if the 'current' is nested in another factor or 
-           * within an interaction of factors. 
-           */
-          
-          for ( let k = 0; k < nfactors; k++ ) {
-            if ( ( terms[c].codes[k] != terms[current].codes[k] ) ) {
-                
-              /*
-               * In the current term, we set the code's column 'k' to 2 (two) 
-               * to denote that factor 'k' nests a factor involved in this term. 
-               * Thre may be multiple 'k's if the 'current' term involves a factor 
-               * nested in an interaction between two or more factors. This notation
-               * will come in handy to compute Cornfield-Tukey Rules later on
-               */
-              
-              terms[current].codes[k] = 2;
-              
-              /*
-               * If the 'current' term denotes a main factor ('order' == 1), having 
-               * another term measuring the same amount of variation (uncorrected 'ss')
-               * means that the former is a nested factor. Its 'type' should be changed 
-               * to 'random', and the list of terms where it is nested in should be
-               * updated.
-               */
-              
-              if ( terms[current].order == 1 ) {
-                  
-                //console.log(current.toString() + ' is nested in ' + k.toString());  
-                  
-                factors[current].nestedin[k] = 1;
-                factors[current].type = RANDOM;
-                
-                /*
-                 * correcting levels of this term will be done later during 
-                 * the correction of term's names
-                 */
-                
-              }   
+      //console.log("For " + terms[i].name)
+      for ( let j = tl - 2; j >= 0; j-- ) {
+        //console.log("  Compare with " + terms[j].name)
+        let found = true;
+        if (i != j ) {
+          for ( let k = 0, vl = terms[i].varcomp.length; k < vl; k++ ) {
+            if (k != i) {
+              if ( terms[i].varcomp[k] != terms[j].varcomp[k] ) {
+                found = false 
+                break;
+              }
             }
           }
-          
-          /*
-           * Accummulate the corrected sums of squares ('SS'). Use the 'averages', 
-           * 'levels', 'sumx', and 'sumx2' of the higher order term, and then 
-           * delete it from the list of terms
-           */
-          
-          terms[current].SS += terms[c].SS;
-          terms[current].averages = terms[c].averages;
-          terms[current].sumx = terms[c].sumx;
-          terms[current].sumx2 = terms[c].sumx2;
-          terms[current].levels = terms[c].levels;
-          terms[current].nlevels = terms[c].nlevels;
-          terms[current].combins = terms[c].combins;
-          
-          /*
-           * Remove the redundant term
-           */
-          
-          terms.splice(c, 1);  
-             
-          //console.log("Removing "+ c.toString());  
-          
         } else {
+          found = false;
+        }  
+        if (found) {
+          terms[i].against = j;
+          terms[i].F = terms[i].MS/terms[j].MS;
+          terms[i].P = 1 - jStat.centralF.cdf(terms[i].F, terms[i].df, terms[j].df);
+          break;
+        } else {
+          terms[i].against = -1;
+          terms[i].F = NaN;
+          terms[i].P = NaN;      
           
-          /*
-           * We only increment 'c' if no term was deleted from
-           * the list. If there was a deletion, the next term
-           * in the list (if any) will occupy the position of
-           * the deleted term
-           */
-          
-          c++;            
-        }
-      } 
-      current++;  
-    }
-    
-    
-    correctTermNames();
-
-    /*
-     * Finally, correct the degrees of freedom of each term. 
-     * Skip the two last terms, the "total" and the "Error" term!
-     */
-     
-    for (let i = 0, tl = terms.length - 2; i < tl; i++) {
-      terms[i].df = 1;
-      for (let k = 0; k < nfactors; k++) {
-        if( terms[i].codes[k] == 1 ) terms[i].df *= factors[k].nlevels - 1;
-        if( terms[i].codes[k] == 2 ) terms[i].df *= factors[k].nlevels;   
+        }  
       }  
-      terms[i].MS = terms[i].SS/terms[i].df;
-    }
+    }  
     
+    displayCTRules();
   }
-  
   
   /*************************************************************************/
   /*                                                                       */
@@ -2060,16 +1012,512 @@ var anova = (function () {
 
   }
   
+   
+  /*************************************************************************/
+  /*                                                                       */
+  /*                        correctForNesting                              */
+  /*                                                                       */
+  /* A factor can be nested in another factor or in an interaction of two  */
+  /* or more factors. This function checks if the uncorrected sums of      */
+  /* squares of a pair of terms is the same. In this case, if one of the   */
+  /* terms denote a single factor (the other denoting an interaction where */
+  /* this factor is involved) it means that the single factor is nested    */
+  /* into any other factor participating in the interaction. If the        */
+  /* interaction is of first order (two factors involved) the nesting      */
+  /* factor is mandatorily the one which is not designated by the term     */
+  /* that denotes a single factor. For complex designs, for example, those */
+  /* with factors nested into interactions, the process is more tricky.    */
+  /* See detail within the function.                                       */
+  /*                                                                       */ 
+  /*************************************************************************/ 
+  
+  function correctForNesting() {
+    
+    /* 
+     * No need to check for nesting if there is only one factor,
+     * or if there is no hint on nested factors ('nested' == false). 
+     * The latter is determined in the 'getPartialSS' function
+     * by comparing the observed number of levels of each term
+     * with the expected number of levels given a simple fully
+     * orthogonal analysis.
+     */  
+    
+    if( ( nfactors == 1 ) || (!nesting) ) return;
+    
+    /*
+     * Start by denoting the current term by 'current'    
+     */
+    
+    let current = 0; 
+    
+    /*
+     * Skip the two last terms, the "Total" and the "Error" terms!
+     */
+    
+    while(current < terms.length - 2) {
+      
+      /*
+       * Denote the term being compared (target) by 'c'
+       */
+      
+      let c = current + 1;
+      
+      /*
+       * Skip the two last terms, the "Total" and the "Error" terms!
+       */
+      
+      while (c < terms.length - 2) {
+          
+        // console.log("Comparing " + current.toString() + " with " + c.toString());
+          
+        if( terms[current].ss == terms[c].ss ) {
+            
+          /*
+           * If the uncorrected sums of squares are similar the 'current' term is 
+           * nested into a term involved in term 'c' (which is mandatorly an 
+           * interaction in a fully orthogonal analysis). Now compare the two
+           * terms to find out if the 'current' is nested in another factor or 
+           * within an interaction of factors. 
+           */
+          
+          for ( let k = 0; k < nfactors; k++ ) {
+            if ( ( terms[c].codes[k] != terms[current].codes[k] ) ) {
+                
+              /*
+               * In the current term, we set the code's column 'k' to 2 (two) 
+               * to denote that factor 'k' nests a factor involved in this term. 
+               * Thre may be multiple 'k's if the 'current' term involves a factor 
+               * nested in an interaction between two or more factors. This notation
+               * will come in handy to compute Cornfield-Tukey Rules later on
+               */
+              
+              terms[current].codes[k] = 2;
+              
+              /*
+               * If the 'current' term denotes a main factor ('order' == 1), having 
+               * another term measuring the same amount of variation (uncorrected 'ss')
+               * means that the former is a nested factor. Its 'type' should be changed 
+               * to 'random', and the list of terms where it is nested in should be
+               * updated.
+               */
+              
+              if ( terms[current].order == 1 ) {
+                  
+                //console.log(current.toString() + ' is nested in ' + k.toString());  
+                  
+                factors[current].nestedin[k] = 1;
+                factors[current].type = RANDOM;
+                
+                /*
+                 * correcting levels of this term will be done later during 
+                 * the correction of term's names
+                 */
+                
+              }   
+            }
+          }
+          
+          /*
+           * Accummulate the corrected sums of squares ('SS'). Use the 'averages', 
+           * 'levels', 'sumx', and 'sumx2' of the higher order term, and then 
+           * delete it from the list of terms
+           */
+          
+          terms[current].SS += terms[c].SS;
+          terms[current].averages = terms[c].averages;
+          terms[current].sumx = terms[c].sumx;
+          terms[current].sumx2 = terms[c].sumx2;
+          terms[current].levels = terms[c].levels;
+          terms[current].nlevels = terms[c].nlevels;
+          terms[current].combins = terms[c].combins;
+          
+          /*
+           * Remove the redundant term
+           */
+          
+          terms.splice(c, 1);  
+             
+          //console.log("Removing "+ c.toString());  
+          
+        } else {
+          
+          /*
+           * We only increment 'c' if no term was deleted from
+           * the list. If there was a deletion, the next term
+           * in the list (if any) will occupy the position of
+           * the deleted term
+           */
+          
+          c++;            
+        }
+      } 
+      current++;  
+    }
+    
+    
+    correctTermNames();
+
+    /*
+     * Finally, correct the degrees of freedom of each term. 
+     * Skip the two last terms, the "total" and the "Error" term!
+     */
+     
+    for (let i = 0, tl = terms.length - 2; i < tl; i++) {
+      terms[i].df = 1;
+      for (let k = 0; k < nfactors; k++) {
+        if( terms[i].codes[k] == 1 ) terms[i].df *= factors[k].nlevels - 1;
+        if( terms[i].codes[k] == 2 ) terms[i].df *= factors[k].nlevels;   
+      }  
+      terms[i].MS = terms[i].SS/terms[i].df;
+    }
+    
+  }
+  
+ 
+  /*************************************************************************/
+  /*                                                                       */
+  /*                        correctTermNames                               */
+  /*                                                                       */
+  /* After correcting for nesting, by pooling terms with similar           */
+  /* uncorrected sums of squares ('ss'), the names of the terms should be  */
+  /* changed to denote the nesting hierarchy. A term X nested into a term  */
+  /* Y should be named X(Y). A term X nested into an interaction of terms  */
+  /* Y and Z should be named X(Y*Z). After correcting the names the dfs    */
+  /* of nested factors or interactions involving them should also be       */ 
+  /* corrected.                                                            */ 
+  /*                                                                       */ 
+  /*************************************************************************/ 
+  
+  function correctTermNames() {
+      
+    /*
+     * For factors that are nested into others, correct the nesting depth 
+     * (number of factors where it is nested into, i.e. number of 'nestedin' 
+     * codes equal to one (1)). Take this opportunity to correct the levels 
+     * of nested factors. Usually the number of levels as computed from the 
+     * data file is much larger than the actual number of levels, and is 
+     * computed by dividing the observed levels by the number of levels of 
+     * factors where the nested factor is nested into. 
+     */
+    
+    for ( let i = 0; i < nfactors; i++ ) {
+      for ( let j = 0; j < nfactors; j++ ) {
+        if( factors[i].nestedin[j] == 1 ) {
+          factors[i].depth++;
+          factors[i].nlevels /= factors[j].nlevels;  
+        }
+      }
+    }    
+    
+    /*
+     * Now, correct the names of the factors according to the nesting hierarchy. 
+     * To do this we need to build a list of terms ordered by their nesting depth 
+     * (i.e. how many factors/interactions are they nested in) in ascending order
+     * (lower depths first). This is necessary because we cannot mess with the 
+     * order of the 'factors' and 'terms' arrays: the first factor in array 
+     * 'factors' (index 0) should correspond to the first term in array 'terms'
+     * (with a similar index of 0), and so on. The list will only contain terms
+     * which are nested into others
+     */
+    
+    let nfl = [];
+    
+    for (let i = 0; i < nfactors; i++) {
+      let nested = factors[i].depth; 
+      if ( nested > 0 ) {
+        let f = {};
+        f.index = i;
+        f.codes = factors[i].nestedin;
+        f.depth = factors[i].depth;
+        f.name = factors[i].name;
+        nfl.push(f);
+      }  
+    }
+    
+    /*
+     * Sort nested factors from lowest nesting depths to highest nesting depths
+     */
+    
+    nfl.sort(function(a,b){return a.depth - b.depth; });
+    
+    
+    /*
+     * Eliminate redundant codes, i.e. those that are associated
+     * with a factor which is already nested into another. As an
+     * example consider the following 4 factor ANOVA in which 
+     * factor B is nested in A, and factor C ins nested in A and B
+     *
+     * i  Factor nestedin   depth
+     * 0  A      [0,0,0,0]  0 
+     * 1  B      [1,0,0,0]  1
+     * 2  C      [1,1,0,0]  2
+     * 3  D      [0,0,0,0]  0
+     * 
+     * For factor C, nesting in A is redundant because B (in which
+     * it nested) is itself nested in A. The 'nestdin' for C should
+     * be [0,1,0,0]. Why? Because the name for B will be replaced
+     * by B(A) (its depth is 1, so this is done before renaming C,
+     * which depth is 2). Now when we replace factor names in C, 
+     * there is only one to be replaced (B) and the term will be
+     * named C(B(A))
+     *
+     * Now, suppose now that C is nested in the interaction A*B instead
+     * (hence B would not be nested in A, since nested factors do not
+     * created interactions with the factors where they are nested in).
+     * The codes would be
+     *
+     * i  Factor nestedin   depth
+     * 0  A      [0,0,0,0]  0 
+     * 1  B      [0,0,0,0]  0
+     * 2  C      [1,1,0,0]  2
+     * 3  D      [0,0,0,0]  0    
+     *
+     * There are no redundancies in this set, and the name of C would
+     * become C(A*B)
+     */
+    
+    for (let i = 0, len = nfl.length; i < len; i++) {
+      
+      /*
+       * No need to check for redundancies in factors that
+       * are nested into a single one  
+       */
+      
+      if(nfl[i].depth > 1) { 
+        for (let j = 0, len = nfl.length; j < len; j++) {
+          if ( ( i != j ) && ( nfl[j].depth < nfl[i].depth ) ) { 
+            for (let k = 0; k < nfactors; k++ ) {
+              if ( ( nfl[i].codes[k] == 1 ) && ( nfl[j].codes[k] == 1 ) ) {
+                let f = nfl[j].index;
+                if (nfl[i].codes[f] == 1) nfl[i].codes[k] = 0; 
+              } 
+            }  
+          }  
+        }
+        let nm = [];
+        let j = nfl[i].index;
+        for (let k = 0; k < nfactors; k++ ) {
+          if( nfl[i].codes[k] == 1 ) nm.push(factors[k].name);  
+        }
+        factors[j].name += "(" + nm.join("*") + ")";
+      } else {
+        let j = nfl[i].codes.indexOf(1);
+        let k = nfl[i].index;
+        if ( j != -1 ) factors[k].name += "(" + factors[j].name + ")";   
+      }  
+    }
+   
+    /*
+     * Finally, replace the new names in all terms. Note that the two 
+     * last terms are the Error and the Total, so skip them!
+     */
+    
+    for (let i = 0, len = terms.length - 2; i < len; i++) {
+      let nm = [];
+      for ( let j = 0; j < nfactors; j++) {
+        if (terms[i].codes[j] == 1 ) {
+          nm.push(factors[j].name);   
+        } 
+      }
+      terms[i].name = nm.join("*");
+    }
+    
+    //console.table(terms);
+  }
+  
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayANOVA                               */
+  /*                                                                       */
+  /* This function displays a table with the Analysis of Variance          */
+  /*                                                                       */     
+  /*************************************************************************/   
+  
+  function displayANOVA() {
+       
+    let text = '<div class="ct"><table>' +
+                '<thead><tr><th>Source</th><th>SS</th><th>df</th><th>MS</th><th>F</th>' +
+                '<th>Prob.</th><th>Against</th></tr></thead><tbody>';
+     
+    for(let i = 0, len = terms.length; i < len; i++ ) {
+      text += "<tr>";
+      text += "<td>" + terms[i].name + "</td>";
+      text += "<td>" + terms[i].SS.toFixed(5).toString() + "</td>";
+      text += "<td>" + terms[i].df.toString() + "</td>";
+      if( terms[i].name != "Total" ) {
+        text += "<td>" + terms[i].MS.toFixed(5).toString() + "</td>";
+      } else {
+        text += "<td></td>";  
+      } 
+      let nm = terms[i].against;
+      if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
+        text += "<td>" + terms[i].F.toFixed(5).toString() +"</td>";
+        let prob = "";
+        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(5).toString();
+        else prob = "<b><i>" + terms[i].P.toFixed(5).toString() + "</i></b>";     
+        text += "<td>" + prob + "</td>";
+        text += "<td>" + terms[nm].name + "</td>";
+      } else {
+        text += "<td></td>";
+        text += "<td></td>";
+        if ( nm == -1) text += "<td><b>No Test</b></td>";
+        else text += "<td></td>";
+      }  
+      text += "</tr>";
+    }
+    text += '</tbody></table></div>';
+    
+    text += '<div class="ct"><p>Rejection criteria (&alpha;):</p>'+
+             '<p><input type="number" id="anova_alpha" value="' +
+             rejection_level.toString() + 
+             '" min="0.00000" max="0.999999" step="0.1" onchange="anova.setAlpha()"/></p>' +
+             '</div>';
+
+    /*
+     * Update contents of 'display' tab (ANOVA results)
+     */
+    
+    let d = document.getElementById('analysis');
+    d.innerHTML = text; 
+    
+    /*
+     * Select ANOVA results tab ('analysis') using ui function 'select
+     * hidding all other tabs
+     */
+    
+    selectTab('analysis');
+        
+  }  
 
   /*************************************************************************/
   /*                                                                       */
-  /*                            displayTerms                               */
+  /*                            displayAverages                            */
   /*                                                                       */
-  /* This function displays all ANOVA terms and their corresponding        */       
-  /* information (SS, DFs, levels, etc.)                                   */
+  /* This function displays a small table with the summary of the averages */
+  /* for each term in the ANOVA. This information may be useful to graph   */
+  /* data further on or simply to check if the analysis has ben correctly  */
+  /* done.                                                                 */
   /*                                                                       */
+  /*************************************************************************/ 
+  
+  function displayAverages() {
+        
+    let d = document.getElementById('averages'); 
+    
+    // Create the table as a whole text bunch of HTML to avoid
+    // multiple calls to the DOM structure
+  
+    let table = '';
+    
+    for(let i = 0, len = terms.length - 2; i < len; i++ ) {
+       
+      table += '<h3>Averages for ' + terms[i].name + '</h3>'; 
+      
+      table += '<table><thead><tr>';
+      
+      let cds = [...terms[i].codes];
+      for(let j = 0, jlen = cds.length; j < jlen; j++ ) {
+        if( cds[j] != 1 ) cds[j] = '-'; 
+        else table += '<th>' + factors[j].name + '</th>';
+      }  
+      
+      table += '<th>Average</th><th>n</th><th>St. Dev.</th><th>Variance</th></tr></thead><tbody>'; 
+      
+      for(let j = 0, jlen = terms[i].average.length; j < jlen; j++ ) { 
+        table += '<tr>';  
+        let levs = terms[i].levels[j].split(',');
+        for(let k = 0, klen = levs.length; k < klen; k++ ) {
+          if( cds[k] == 1 ) {
+            table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
+          }  
+        }
+        table += '<td>' + terms[i].average[j].toString() + '</td>';
+        let n = parseInt(terms[i].n[j]);
+        table += '<td>' + n.toString() + '</td>';
+        
+        let std = 0, variance = 0;
+        if( n > 1 ) variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
+        std = Math.sqrt(variance,2);
+        
+        table += '<td>' + std.toString() + '</td>';
+        table += '<td>' + variance.toString() + '</td>';
+        table += '</tr>'; 
+      } 
+      table += '</tbody></table>';
+    }
+    d.innerHTML = table;
+  }
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayCTRules                             */
+  /*                                                                       */
+  /* This function displays a table with the Analysis of Variance          */
+  /*                                                                       */     
   /*************************************************************************/   
   
+  function displayCTRules( ) {
+    
+    let c = document.getElementById('ctrules'); 
+    
+    
+    let table = '<div class="ct"><table><thead>';
+    
+    
+    /*
+     * Build the header of the table. First column for the ANOVA term name
+     */
+    
+    table += '<tr><th>Term</th>';
+    
+    
+    /*
+     * Now add one column for each subscript associated with each factor,
+     * plus one column for the Error. This is the CT table of multipliers,
+     * and its display is just for debugging purposes
+     */
+    
+    
+    /*
+     * We should build a table with as many columns as ANOVA terms (including
+     * the Error term) which will display the components of variance measured
+     * by each term. Again, displaying this is only necessary while debugging 
+     */
+    
+    
+    /*
+     * Finally a column to display which variance components are estimated
+     * by each term
+     */
+    
+    table += '<th>Estimates</th></tr></thead><tbody>';
+    
+    
+    /*
+     * Compute rows
+     */
+    
+    for(let i = 0, len = terms.length - 1; i < len; i++ ) {
+      table += '<tr><td>' + terms[i].name + '</td>';
+      
+      let est = [], name = "";
+      for ( let j = terms.length - 2; j >= 0; j--) {
+        if(terms[i].varcomp[j] > 0 ) {
+          if( ( terms[j].name === 'Error') || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
+          else name = terms[j].name;
+          if( terms[i].varcomp[j] === 1 ) est.push('&sigma;<sup>2</sup><sub>' + name + '</sub>');
+          else est.push(terms[i].varcomp[j].toString() + '*&sigma;<sup>2</sup><sub>' + name + '</sub>'); 
+        }
+      }
+      table += '<td>' + est.join(' + ') + '</td></tr>';
+      
+    }
+    
+    table += '</tbody></table></div>';
+    
+    
+    c.innerHTML = table;
+    
+  } 
   /*************************************************************************/
   /*                                                                       */
   /*                            displayData                                */
@@ -2125,6 +1573,72 @@ var anova = (function () {
 
     tb.innerHTML  = table;
   }
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayFactors                             */
+  /*                                                                       */
+  /* This function displays a small table with the summary of the factors, */
+  /* their types, names and number of levels, derived from the data file   */
+  /*                                                                       */
+  /*************************************************************************/ 
+  
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayAverages                            */
+  /*                                                                       */
+  /* This function displays a small table with the summary of the averages */
+  /* for each term in the ANOVA. This information may be useful to graph   */
+  /*                                                                       */
+  /*************************************************************************/ 
+  
+  function displayMultipleComparisons() {
+        
+    let d = document.getElementById('mtests'); 
+    
+    // Create the text as a whole bunch of HTML to avoid
+    // multiple calls to the DOM structure
+    
+    /*
+     * Provide two <divs>: one for selecting the type of test and the other
+     * to display the results of the multiple tests, identified by the
+     * id = 'mtest_results', but invisible (style="display:none") for now. 
+     */
+    
+    let text = '<div class="ct">' +
+            '<h3>Multiple Comparison Tests</h3>' +
+            '<p><input type="radio" name="test" value="none" checked>None</p>' +
+            '<p><input type="radio" name="test" value="snk">Student-Newman-Keuls (SNK)</p>' +
+            '<p><input type="radio" name="test" value="tukey">Tukey (HSD)</p>' +
+            '<p>Rejection criteria (&alpha;): <input type="number" id="mtests_alpha" value="' +
+             mt_rejection_level.toString() + 
+             '" min="0.00000" max="0.999999" step="0.01" onchange="anova.setMtAlpha()"/></p>' +
+             '<p><button onclick="anova.multipleTests()">Compute</button></p>' +
+            '</div>' +
+            '<div class="ct" id="mtest_results" style="display: none;"></div>';
+    
+    d.innerHTML = text;
+  }
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayPartials                            */
+  /*                                                                       */
+  /* This function displays a table with the list of 'partials'. Each      */
+  /* partial represents a unique combination between levels of every factor*/
+  /* present, and contains the accummulated sums of all observations       */
+  /* ('sumx'), and sums of all squared observations ('sumx2)               */
+  /*                                                                       */     
+  /*************************************************************************/ 
+  
+
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            displayTerms                               */
+  /*                                                                       */
+  /* This function displays all ANOVA terms and their corresponding        */       
+  /* information (SS, DFs, levels, etc.)                                   */
+  /*                                                                       */
+  /*************************************************************************/   
+  
   
   /*************************************************************************/
   /*                                                                       */
@@ -2603,196 +2117,682 @@ var anova = (function () {
     d.innerHTML += '<div class="ct">Bartlett\'s test' + testBartlett() + "</div>";
     
   }
+
+  function studentizedComparisons(test, fact, df, ms, avgs) {
+    //console.log(avgs)  
+    let t = "";
+    let comps = [], p = 0;
+    //t += '<p>' + fact.toString() + ' ' + df.toString() + ' ' + ms.toString() +'</p>';
+    let total_range = avgs.length;
+    let range = total_range;
+    do {
+      let times = total_range - range + 1; 
+      for( let i = 0; i < times; i++ ) {
+        let j = i + range - 1;
+
+        //console.log('Compare level ' + avgs[i].level + ' against level ' + avgs[j].level);
+        
+        let q = Math.abs(avgs[i].average - avgs[j].average)/Math.sqrt( ms / avgs[i].n );
+        if(test == 'tukey') p = 1 - jStat.tukey.cdf(q, total_range, df);
+        if(test == 'snk')   p = 1 - jStat.tukey.cdf(q, range, df);
+        
+        if( p > mt_rejection_level ) {
+          let included = false;
+          for( let k = 0, kl = comps.length; k < kl; k++ ) { 
+            if( ( i >= comps[k][0] ) && (j <= comps[k][1]) ) {
+              included = true;
+              break;
+            }    
+          }
+          if(!included) {
+            //comps.push({a1: i, a2: j, q: q, p: p});   
+            comps.push([ i, j ]);  
+            //t += '<p>' + i.toString() + ' == ' + j.toString() + '</p>';  
+            //t += '<p>' + avgs[i].level + ' = ' + avgs[j].level + '    <i>(' + i.toString() + ' = ' + j.toString() + ')</i></p>'; 
+            //console.log(q,p); 
+          }  
+        }
+        //console.log(q,p); 
+      }
+      range--;  
+    } while(range > 1);
+    
+    /*
+     * Check wich levels of the target factor fall outside the homogeneous
+     * groups in 'comps' and add them to the list.
+     */
+    
+    for( let i = 0, il = avgs.length; i < il; i++ ) {
+      let included = false;  
+      for ( let j = 0, jl = comps.length; j < jl; j++) {
+        if( ( i >= comps[j][0] ) && ( i <=  comps[j][1] ) ) {
+          included = true;
+          break;
+        }    
+      }    
+      if( !included ) {
+        comps.push([i, i]);  
+      }    
+    }    
+    
+    comps.sort((a, b) => (a[0] >  b[0])? 1 : -1); 
+    
+    //console.log(comps)
+    
+    t += '<table>';
+    t += '<tr><th>Level</th><th>Average</th><th>n</th>';
+    for( let i = 0, il = comps.length; i < il; i++ ) t += '<th>&nbsp;</th>';
+    t += '</tr>';
+    for( let i = 0, il = avgs.length; i < il; i++ ) {
+      t += '<tr><td>'+avgs[i].level+'</td><td>'+avgs[i].average.toString()+'</td><td>'+avgs[i].n.toString()+'</td>';
+      for(let j = 0, jl = comps.length; j < jl; j++) {
+        if(( i >= comps[j][0] ) && (i <= comps[j][1])) t += '<td>&#9679;</td>';
+        else t += '<td>&nbsp;</td>';
+      }
+      t += '</tr>'; 
+    }    
+    t += '</table>';
+    return t;
+  }    
+
+
+  function multipleTests() {
+    
+    //console.log(mcomps)
+      
+    /*
+     * studentized range statistics. Student Newman Keuls, Tuket, Duncan are
+     * all based on studentized range Q. 
+     */  
+    
+    let studentized = ['snk', 'tukey', 'duncan'];
+    
+    /*
+     * Grab the <select> element which holds the type of multiple test 
+     * to apply which is denoted by id='test'
+     */
+    
+    let elem = document.getElementsByName("test");
+    
+    let testName = 0;
+    for( let i = 0; i < elem.length; i++ ) {
+      if( elem[i].checked ) {
+        testName = elem[i].value;
+        break;
+      }  
+    } 
+    
+    /*
+     * use 'elem' to point to a <div> which will hold the results
+     * of the multiple tests (id='mtest_results')
+     */
+    
+    elem = document.getElementById("mtest_results"); 
+    
+    /*
+     * If the selection is not 'None' (index 0)...
+     */
+    
+    if( testName != 'none' ) {
+      let text = "";
+      
+      for(let i = 0, len = mcomps.length; i < len; i++ ) {
+       
+        let dferr = mcomps[i].df_against,
+            mserr = mcomps[i].ms_against,
+            fcode = mcomps[i].fcode;
+            
+        /*
+         * Display a header for the multiple comparison
+         */
+        
+        text += '<h3>Multiple comparisons for levels of factor ' + mcomps[i].fname;
+        if(mcomps[i].type == 'interaction') text += ' within levels of ' + mcomps[i].term + '</h3>';
+        else text += '</h3>'; 
+         
+        /*
+         * Go along the whole list of comparisons for this term. It may be just
+         * a single test if 'mcomps' is of type 'factor' (involves comparisons
+         * between multiple averages), or it can be a series of tests, one for
+         * each combination of levels of facto.rs whith which the one being 
+         * compared interacts with
+         */
+        
+        for(let a in mcomps[i].averages) {
+            
+          /*
+           * Check if this is an interaction. If so, specify the combination
+           * of levels of interacting factors within which multiple tests are
+           * being carried for factor 'mcomps[i].fcode'. The 'key' for the
+           * 'mcomps[i].averages[]' array holds the combination of levels
+           * involved with '-' for factors not included in the interaction
+           * or the target factor itself.
+           */
+
+          if( mcomps[i].type == 'interaction' ) {
+            let f = a.split(',');
+            //console.log(f);
+            let t = [];
+            for(let j = 0, jlen = f.length; j < jlen; j++ ) {
+              if( f[j] != '-' ) {  
+                t.push('level <i>' + factors[j].levels[f[j]] + '</i> of factor ' + factors[j].name);
+              }
+            }
+            text += '<h4>For ' + t.join(' and ') + '</h4>';
+          }    
+
+          /*
+           * Check if the multiple test is of type 'studentized range'
+           */
+          
+          if( studentized.indexOf(testName) != -1 ) {
+            text += studentizedComparisons(testName, fcode, dferr, mserr, mcomps[i].averages[a] );  
+          }  
+        }    
+      }
+
+      if( text == "" ) text="<h3>No multiple tests available!</h3>Are you sure there are significant differences in fixed factors?";
+      elem.innerHTML = text;
+      elem.style.display = 'inline-block';
+      
+        
+    } else {
+      elem.innerHTML = "";  
+      elem.style.display = 'none';
+    }    
+
+  }
   
   /*************************************************************************/
   /*                                                                       */
-  /*                            buildTerms                                 */
+  /*                             openDataFile                              */
   /*                                                                       */
-  /* This function builds the list of terms of any ANOVA with N factors.   */
-  /* First it computes all possible combinations of factors as if a fully  */
-  /* factorial ANOVA is being made. Then a check for nesting of factors    */
-  /* is made and if any factor is found to be nested into another factor   */
-  /* or into an interaction, a correction is made by accummulating the     */
-  /* appropriate sums of squares, degrees of freedom, averages, levels,    */
-  /* and factor name's notation, and removing the edundant term from the   */
-  /* list                                                                  */
-  /*                                                                       */ 
-  /*************************************************************************/  
+  /* Function used to open a data file. It clears the contents of the DOM  */
+  /* that are related with the Analysis of Variance. It also resets the    */
+  /* global variables for the new analysis.                                */
+  /*                                                                       */
+  /*************************************************************************/
 
-  function buildTerms() { 
+  function openDataFile() {
+      
+    /*
+     * Grab the file object
+     */
+    
+    let selectedFile = document.getElementById('loadFile').files[0];
+    
+    if(typeof(selectedFile) === 'undefined') return;
+    
+    /*
+     * Set the mimetype of files to be read as 'text.*'
+     */
+    
+    let textType = /text.*/;
+    
+    if ( selectedFile.type.match( textType ) ) {
         
+      filename = selectedFile.name;
+      
+      let h = document.getElementById('filename');
+      
+      h.innerHTML = 'Current selected file is <b>' + filename + '</b>';   
+      
+      /*
+       * Clean any global variables used in previous analysis
+       */
+      
+      resetAnalysis();
+      
+      /*
+       * Create a new reader and set its property 'onload'
+       * to parse the data file 
+       */
+      
+      let reader = new FileReader();
+      
+      /*
+       * Define the function used for 'onload' (i.e., the
+       * fcunction that actually reads the values from the 
+       * data file selected)
+       */
+      
+      reader.onload = function(e) {
+        let header = true;
+        let text   = reader.result;
+        let lines  = text.split('\n');
+        for( let i = 0, len = lines.length; i < len; i++ ) {
             
-    /*     
-     * Construct a list of 'terms' (denoting either main factors or interactions) 
-     * assuming that a fully orthogonal analysis is being done. The number of 
-     * terms of any fully orthogonal design is given by 
-     * 
-     * 2^n 
-     * 
-     * where n is the number of factors involved 
-     * 
-     * Note that the formula includes the empty element {} and all possible 
-     * combinations of factors ignoring their order. For example, for a 
-     * set with three factors {A,B,C} the total number of terms is given by 
-     * 
-     * 2^3 = 8 
-     * 
-     * which are
-     * 
-     * {}, {A}, {B}, {C}, {AB}, {AC}, {BC}, {ABC} 
-     * 
-     * Note that {BA}, {CA}, {CB}, {ACB}, {BCA}, {BAC}, {CAB}, and {CBA}
-     * are not included as the order does not matter
-     */
- 
-    let s = Math.pow(2, nfactors);
-    
-    /*
-     * Now create all combinations of factors, one in each iteration,
-     * but exclude i = 0 which corresponds to the empty set {}
-     */
-    
-    for( let i = 1; i < s; i++ ) {
-        
-      let temp = { idx: 0, name: "", codes: [], order: 0, combins: 1, nlevels: 0,
-                   levels: [], sumx: [], sumx2: [], n: [], average: [], ss: 0,
-                   df: 1, SS: 0, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -1, 
-                   F: 0 };
-                   
-      for( let j = 0; j < nfactors; j++ ) {
+          // Trim the line 
+            
+          let li = lines[i].trim();
           
-        /*
-         * Unfortunately, we need an additional attribute 'idx' to keep the order of
-         * creation of the terms. The order will be: 
-         * idx : term
-         * -----------
-         * 0   : A 
-         * 1   : B
-         * 2   : A*B
-         * 3   : C
-         * 4   : A*C
-         * ...
-         * Note that the fourth term (idx = 3) is a main factor ('C'), but it is 
-         * created after the interaction A*B. Later on, the list of terms of the ANOVA 
-         * should be sorted according to the 'order' of terms (1 - for main factors, 
-         * 2 - for 1st order interactions, 3 - for second order interactions, and so on). 
-         * However, two terms may have the same 'order' (for example, both are first
-         * order interactions, and their 'order' is 2). In these cases, we need to have 
-         * a way to sort them according to the order they were created during the reading 
-         * stage of data. This is particularly important for terms denoting the main 
-         * factors. If their order differs from the the order in which main factors 
-         * were created during the reading stage of data (see 'factors') problems will 
-         * occur because the 'codes' property of 'terms' and 'partials' lists expects 
-         * that the order of the main factors is the same as in the 'factors' array
-         */
-        
-        temp.idx = i;  
-        if( (i & Math.pow(2,j)) ) {
-          temp.codes[j] = 1;
-          temp.order++;
-          temp.combins *= factors[j].nlevels;
-        } else {
-          temp.codes[j] = 0;
-        }
-        
-        /*
-         * Insert one more code for the "Error" to all terms
-         */
-        
-        temp.codes.push(0);
-      }
-      terms.push(temp);
-    }
-    
-    
-    
-    /*
-     * Compute the 'partials' list, i.e., a list with all terms potentially
-     * included in an ANOVA.
-     */
-    
-    if( getPartialSS() ) {
-        
-      /*
-       * Sort 'terms' by ascending 'terms[].order'. Note that if the terms 'order' 
-       * is the same for two or more terms we resort to their 'idx' attribute to 
-       * keep the correct order. This is only important for main factors 
-       * (terms[].order == 1) because their order should be the same as for the 
-       * 'factors[]' order 
-       */
-      
-      terms.sort( function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
-      
-      /*
-       * Recompute MSs and dfs for all terms. Do not do this for the "Error" and 
-       * the "Total" because their SS and df are already computed.
-       */
-       
-      for ( let i = 0, len = terms.length - 2; i < len; i++ ) {
-        if( terms[i].order == 1 ) {
-          terms[i].df = factors[i].nlevels - 1;
-        } else {
-          let m = 1;
-          for ( let j = 0; j < nfactors; j++ ) {
-            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1; 
+          /*
+           * Check if the line is commented (starts with '#') or if
+           * it is an empty line. If so, ignore it!
+           */
+          
+          if( ( li[0]!=='#' ) && ( li.length !== 0 ) ) {
+              
+            /*
+             * Split the line using spaces or tabs
+             */
+            
+            li = li.split(/[\s\t]+/); 
+            
+            /*
+             * Check if we are reading the first valid line, 
+             * which should be the header with the names of 
+             * the factors
+             */
+            
+            if( header ) {
+                
+              /*
+               * Number of factors is equal to the number of columns
+               * in the data file minus the data column which is usually
+               * named 'DATA' and should be the last column
+               */
+              
+              nfactors = li.length - 1;
+              
+              for( let j = 0, k = li.length - 1; j < k; j++ ) {
+                factors[j] = {};
+                let name = li[j];
+                
+                /*
+                 * Factor names ending in '*' are of type 'RANDOM',
+                 * otherwise they are of type 'FIXED'
+                 */
+                
+                if( name.endsWith( "*" ) ) {
+                  factors[j].type = RANDOM;
+                  name = name.slice( 0, name.length-1 );
+                } else {
+                  factors[j].type = FIXED;
+                }
+                factors[j].name = name;
+                factors[j].orig_name = name;
+                factors[j].nlevels = 0;
+                factors[j].levels = [];
+                factors[j].nestedin = new Array( nfactors ).fill(0);
+                factors[j].depth = 0;
+                
+                /*
+                 * Compute the subscript for the current factor
+                 * starting in 'i' (the first factor) which has
+                 * ASCII charcode 105. This will be needed in 
+                 * the CT Rules procedure later on...
+                 */
+                
+                factors[j].subscript = String.fromCharCode( j + 105 );
+              }   
+              
+              /*
+               * The header was read. All subsequent lines will be 
+               * point observations (values) preceded by their 
+               * respective level codes per factor (each factor
+               * will be in a different column). Set variable
+               * 'header' to false so that next time we jump to
+               * the part that parses values and level codes
+               */
+              
+              header = false; 
+              
+            } else {
+                
+              /*
+               * First check if this line has the same number of elements 
+               * of the header line. If not, abort, because something is 
+               * missing...
+               */
+              
+              if( li.length != nfactors + 1 ) {
+                let ln = i + 1;
+                let c = li.length.toString();
+                let ec = nfactors + 1;
+                alert('In line ' + ln.toString() + ' number of columns (' + c + 
+                      ') is different from what is expected (' + e.toString() + ')');
+                return;
+              }
+              
+              /*
+               * Create a new object to hold the new observation
+               * corresponding to the line being parsed. 
+               * This object will hold the classification criteria
+               * for each data observation, i.e. the level codes 
+               * per each factor. Moreover, it will also hold the
+               * oserved data value into two separate variables: 
+               * 'value' and 'original'. The latter will allow 
+               * resetting the analysis to the original values 
+               * after susbsequent transformation of the data, 
+               * thus avoiding reading the data file again!
+               */
+              
+              let d = {};
+              d.levels = [];
+              for( let j = 0; j < nfactors; j++ ) {
+                  
+                /*
+                 * Read factor level codes for this observation 'li[j]' 
+                 * and check if these level codes are already present 
+                 * in 'factors[].levels' array. If not, add them and 
+                 * increase 'factors[].nlevels' accordingly
+                 */
+                
+                let p = factors[j].levels.indexOf( li[j] );
+                
+                /*
+                 * indexOf return -1 if the argument is not in the array
+                 */
+                
+                if(p == -1 ) {
+                  factors[j].levels.push( li[j] );
+                  factors[j].nlevels++;   
+                }
+                
+                /*
+                 * Add this level to data's new observation 'd'
+                 */
+                
+                d.levels.push( li[j] );
+              }
+              
+              /*
+               * Read the data value. It should be the last column
+               * of the line, which is equivalent 'li[nfactors]' 
+               * because array indexes start on 0!
+               */
+              
+              let n = +li[nfactors].replace( ",", "." );
+              let a = Number.parseFloat(n);
+              if(Number.isNaN(a)) {
+                let ln = i + 1;
+                alert('In line ' + ln.toString() + ' data value (' + n.toString() + ') is not a valid number!');
+                return;
+              } else {  
+                d.value    = n;
+                d.original = n;
+                
+                /*
+                 * The following limits are important to determine 
+                 * what types of transformation are applicable to 
+                 * the data: e.g. arcsin() transformation should 
+                 * only be applied to data ranging from 0 to 1!
+                 */
+                
+                if ( n > max_value ) max_value = n;
+                if ( n < min_value ) min_value = n;
+              }
+              
+              /*
+               * Insert new observation in array 'data'
+               */
+              
+              data.push( d );
+            }  
           }  
-          terms[i].df = m;
         }
-        terms[i].MS = terms[i].SS/terms[i].df;
-      } 
         
-      /*
-       * The df for the "Error" is already computed so we don't overwrite it. 
-       * Instead we compute its MS
-       */
+        /*
+         * Enable all anova tabs as a file was successfully read
+         */
+        
+        let elem = document.getElementsByClassName("tabcontent");
+        for ( let i = 0, len = elem.length; i < len; i++ ) elem[i].innerHTML="";
+        
+        
+        displayData();
+        
+        /*
+         * Start the ANOVA by computing 'partials' 
+         */
+        
+        computePartials(); 
+        
+      }
       
-      let e = terms.length - 2;
-      terms[e].MS = terms[e].SS/terms[e].df;
-      
+      reader.readAsText( selectedFile );
 
       /*
-       * Check if there are nested factors and correct the
-       * ANOVA terms if necessary
+       * Reset the file input object so that reloading the same file works!
        */
       
-      correctForNesting();
+      document.getElementById('loadFile').value = "";
       
-      
-      /*
-       * Compute Cornfield-Tukey rules to determine
-       * denominators for the F-tests
-       */
-      
-      computeCTRules();
-      
-      
-      /*
-       * Display tables of averages per factor or combinations of factors
-       */
-      
-      displayAverages();
-      
-      /*
-       * Build the list of multiple comparisons, if any available
-       */
-      
-      buildMultipleComparisons();
-      
-      /*
-       * Display the tab with multiple comparisons if any is selected
-       */
-      
-      displayMultipleComparisons();
-        
-      /*
-       * Finally display the ANOVA table
-       */
-      
-      displayANOVA();
-    }  
+    } else {
+      alert('File type of ' + filename + ' not supported by your browser.');
+    }
   }
 
   
+
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             resetAnalysis                             */
+  /*                                                                       */
+  /* This function clears all 'global' variables of this module (anova)    */
+  /* and also clears the DOM nodes related with the ANOVA                  */
+  /*                                                                       */  
+  /*************************************************************************/    
+  
+  function resetAnalysis() {
+      
+    /*
+     * Clear results in all <divs> of class 'anovaTabContents' which are children
+     * of <div id='anova'>
+     */
+    
+    let s = document.getElementsByClassName('tabcontent')
+    for( let i = 0, len = s.length; i < len; i++) {
+      if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = "";
+    }
+
+    
+    /*
+     * Reset main variables
+     */
+    
+    nfactors = 0;
+    factors  = [];
+    data     = [];
+    partials = [];
+    terms    = [];
+    corrected_df = 0;
+    replicates = 0;
+    total = {df: 0, ss: 0};
+    residual = {name: "Error", df: 0, ss: 0};
+    nesting = false;
+    max_value = Number.MIN_SAFE_INTEGER;
+    min_value = Number.MAX_SAFE_INTEGER;
+  }
+
+  /*************************************************************************/
+  /*                                                                       */
+  /* Here, we use the saved data values for each entry in the data list to */
+  /* reset the transformed values.                                         */
+  /*                                                                       */
+  /*************************************************************************/
+
+  function resetData() {
+    
+    let h = document.getElementsByClassName("tabcontent");
+    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
+    
+    max_value = Number.MIN_SAFE_INTEGER;
+    min_value = Number.MAX_SAFE_INTEGER;
+    
+    for( let i = 0; i < data.length; i++ ) {
+      data[i].value = data[i].original;
+      if ( data[i].value > max_value ) max_value = data[i].value;
+      if ( data[i].value < min_value ) min_value = data[i].value;
+    }    
+    
+    for( let i = 0; i < factors.length; i++ ) {
+      factors[i].name = factors[i].orig_name;
+      factors[i].nlevels = factors[i].levels.length;
+      factors[i].nestedin = new Array( nfactors ).fill(0);
+      factors[i].depth = 0;
+    }
+    
+    partials = [];
+    terms    = [];
+    corrected_df = 0;
+    replicates = 0;
+    total = {df: 0, ss: 0};
+    residual = {name: "Error", df: 0, ss: 0};
+    nesting = false;
+    
+    displayData();
+        
+    /*
+     * Start the ANOVA by computing 'partials' and then
+     * computing the 'terms' of the analysis
+     */
+        
+    computePartials(); 
+  }
+  
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             setAlpha                                  */
+  /*                                                                       */
+  /* This function sets/changes the rejection criterion (alpha) for the    */
+  /* ANOVA by reading the provided value in the <input> tag with 'id'      */
+  /* 'alpha'. The only effect is to render any statistical tests with      */
+  /* probabilities smaller than 'rejection_level' in italics, to identify  */
+  /* them from non-significant tests                                       */
+  /*                                                                       */
+  /*************************************************************************/
+  
+  function setAlpha() {
+    rejection_level = parseFloat(document.getElementById('anova_alpha').value);
+    if(rejection_level > 1) rejection_level = 0.9999999;
+    if(rejection_level < 0) rejection_level = 0.0000001;
+    //console.log(rejection_level)
+    
+    /*
+     * We should redisplay the ANOVA table as some of the
+     * terms may now be statistically significant. Moreover,
+     * multiple tests may also have to be run again...
+     */
+     
+    displayANOVA();
+    
+  }
+  
+  function setMtAlpha() {
+    mt_rejection_level = parseFloat(document.getElementById('mtests_alpha').value);
+    if(rejection_level > 1) rejection_level = 0.9999999;
+    if(rejection_level < 0) rejection_level = 0.0000001;
+    //console.log(mt_rejection_level)
+    
+    /*
+     * We should redisplay the ANOVA table as some of the
+     * terms may now be statistically significant. Moreover,
+     * multiple tests may also have to be run again...
+     */
+    buildMultipleComparisons();
+    multipleTests();
+    //displayANOVA();
+    
+  }
+  /*************************************************************************/
+  /*                                                                       */
+  /*                            transformData                              */
+  /*                                                                       */
+  /* This function applies several possible transformations to data values */
+  /* but keeps original data for any possible reset. Transformations are   */
+  /* applied sequentially, thus "memorizing" previous transformations.     */
+  /* Hence, transforming data using the fourth root is equivalent to apply */
+  /* the square root transformation twice.                                 */
+  /*                                                                       */
+  /*************************************************************************/ 
+
+  function transformData() {
+      
+    let t = document.getElementsByName("transf");
+    let multc = parseFloat(document.getElementById("multc").value);
+    let divc  = parseFloat(document.getElementById("divc").value);
+    let powc  = parseFloat(document.getElementById("powc").value);
+    //console.log(multc,divc,powc);
+    max_value = Number.MIN_SAFE_INTEGER;
+    min_value = Number.MAX_SAFE_INTEGER;
+    
+    let transf = 0;
+    for( let i = 0; i < t.length; i++ ) {
+      if( t[i].checked ) {
+        transf = i;
+        break;
+      }  
+    }    
+
+    for( let i = 0; i < data.length; i++ ) {
+      let v = data[i].value;
+      //let text = i.toString() + ' ' + v.toString();
+      switch(transf){
+          case 1:
+            if( v >= 0 ) v = Math.sqrt(v);  
+            break;  
+          case 2:
+            v = Math.pow(v, 1/3);
+            break;
+          case 3:
+            v = Math.pow(v, 0.25);
+            break;  
+          case 4:
+            if( v >= 0 ) v = Math.log(v+1)/Math.log(10);
+            break;
+          case 5:
+            if( v >= 0 ) v = Math.log(v+1);
+            break;
+          case 6:
+            if( (v >= 0) && ( v <= 1 ))v = Math.asin(v);
+            break;  
+          case 7:
+            v *= multc;
+            break;  
+          case 8:
+            if( divc != 0 ) v /= divc;
+            break;  
+          case 9:
+            v = Math.pow(v, powc);
+            break;    
+      }
+      //text += ' ' + v.toString();
+      //console.log(text)
+      
+      data[i].value = v;  
+      if ( v > max_value ) max_value = v;
+      if ( v < min_value ) min_value = v;
+    }    
+    
+    let h = document.getElementsByClassName("tabcontent");
+    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
+    
+    for( let i = 0; i < factors.length; i++ ) {
+      factors[i].name = factors[i].orig_name;
+      factors[i].nlevels = factors[i].levels.length;
+      factors[i].nestedin = new Array( nfactors ).fill(0);
+      factors[i].depth = 0;
+    }
+    
+    partials = [];
+    terms    = [];
+    corrected_df = 0;
+    replicates = 0;
+    total = {df: 0, ss: 0};
+    residual = {name: "Error", df: 0, ss: 0};
+    nesting = false;
+    
+    displayData();
+    
+    /*
+     * Restart the ANOVA by computing 'partials' 
+     */
+    
+    computePartials(); 
+
+  }
   
   /*************************************************************************/
   /*                                                                       */

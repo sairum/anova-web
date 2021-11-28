@@ -16,6 +16,7 @@
     switchDecSep: switchDecSep,
     multipleFTests: multipleFTests,
     multipleTTests: multipleTTests,
+    tTest: tTest
   } // End of 'return' (exported function)
   
 })();
