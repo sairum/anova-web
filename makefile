@@ -52,16 +52,16 @@ watch:
 	
 optimize: anovajs css simulatejs chartjs samplejs 
 #	@echo Optimizing...
-#	@jsmin < js/anova.js > js/anova.min.js 
-#	@jsmin < js/simulate.js > js/simulate.min.js
-#	@jsmin < js/sample.js > js/sample.min.js
-#	@jsmin < js/chart.js > js/chart.min.js
-#	@jsmin < css/style.css > css/style.min.css
-	@minify js/anova.js > js/anova.min.js 
-	@minify js/simulate.js > js/simulate.min.js
-	@minify js/sample.js > js/sample.min.js
-	@minify js/chart.js > js/chart.min.js
-	@minify css/style.css > css/style.min.css	
+	@jsmin < js/anova.js > js/anova.min.js
+	@jsmin < js/simulate.js > js/simulate.min.js
+	@jsmin < js/sample.js > js/sample.min.js
+	@jsmin < js/chart.js > js/chart.min.js
+	@jsmin < css/style.css > css/style.min.css
+# 	@minify js/anova.js > js/anova.min.js
+# 	@minify js/simulate.js > js/simulate.min.js
+# 	@minify js/sample.js > js/sample.min.js
+# 	@minify js/chart.js > js/chart.min.js
+# 	@minify css/style.css > css/style.min.css
 #@yuicompressor assets/all.js -o assets/all.js
 	
 clean:

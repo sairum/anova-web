@@ -4,17 +4,17 @@
      * Grab population parameters from 'sample.html'
      */
     
-    let N    = parseInt(document.getElementById("t_N").value);
-    let mean = parseFloat(document.getElementById("t_avg").value);
-    let std  = parseFloat(document.getElementById("t_std").value);
-    let n    = parseInt(document.getElementById("t_n").value);
+    let N    = parseInt(document.getElementById("tt_N").value);
+    let mean = parseFloat(document.getElementById("tt_avg").value);
+    let std  = parseFloat(document.getElementById("tt_std").value);
+    let n    = parseInt(document.getElementById("tt_n").value);
     console.log(N, mean, std, n);
     
     /*
      * Clear anything in 't_res' <div>s
      */
     
-    let result = document.getElementById("t_res");
+    let result = document.getElementById("tt_res");
     result.innerHTML = "";
 
     
@@ -56,7 +56,7 @@
      }  
   
      let text = "<h3>Multiple <em>t</em>-tests</h3>";
-     text += "<textarea cols=\"20\" rows=\"10\" id=\"t_results\">";
+     text += "<textarea cols=\"20\" rows=\"10\" id=\"tt_results\">";
      for ( let i = 0; i < N; i++ )  text += ttests[i].toFixed(precision) + "\n";
      text += "</textarea>";    
      result.innerHTML = text;
@@ -66,6 +66,6 @@
      * Enable decimal separator switch
      */
     
-    document.getElementById("t_sep").disabled = false;
+    document.getElementById("tt_sep").disabled = false;
     
   }

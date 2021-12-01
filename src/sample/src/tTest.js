@@ -77,9 +77,29 @@
      result.innerHTML = text;
      result.style.display = "inline-block";  
      
-     
-     let t = (x1-x2)/Math.sqrt(var1/n+var2/n);
-     let p1 = jStat.studentt.cdf(t,2*(n-1)),
+     // We use Math.abs(x1-x2) because otherwise the t-test may yeld negative values.
+     // This, per se, is not a problem but the jstat function studentt(t,df) will
+     // return the probability of observing a value <= t. We want the reciprocal
+     // (1-p) of this, that is, the probability of obtaining a t value equal or
+     // larger than the one observed. However, if the value of t is negative, we will
+     // want to obrain the probability of obtaining a value equal or smaller than he
+     // one observed. In such cases, this is given directly by jstat's studentt(t,df),
+     // and there is no need to compute 1-p. To avoid this, we always compute the
+     // probability of observing a positive value of t or larger. Moreover, doing this,
+     // the two-tailed probability will also be always the double of the observed
+     // one tail probability returned by jstat's studentt(t,df).
+     //
+     // t = 15, df = 10
+     // p one tail   = 0.999999982519
+     // 1-p one tail = 0.000000017481
+     //
+     // t = -15, df = 10
+     // p one tail   = 0.000000017481
+     // 1-p one tail = 0.999999982519
+     //
+
+     let t = Math.abs(x1-x2)/Math.sqrt(var1/n+var2/n);
+     let p1 = 1-jStat.studentt.cdf(t,2*(n-1)),
          p2 = p1*2;
 
      

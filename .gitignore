@@ -1,6 +1,8 @@
 classes/*.pdf
 support/*.pdf
-data/
+data/*.txt
 references/
+examples/*.txt
+tests/
 git-commands.txt
 .gitignore
