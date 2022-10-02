@@ -12,6 +12,7 @@
     sampleNormal: sampleNormal,
     sampleNormalNTimes: sampleNormalNTimes,
     setVar: setVar,
+    setSTD: setSTD,
     setPrecision: setPrecision,
     switchDecSep: switchDecSep,
     multipleFTests: multipleFTests,

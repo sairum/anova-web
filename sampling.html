@@ -28,7 +28,7 @@
                   </tr>
                   <tr>
                      <td>&sigma;&sup2; (variance)</td>
-                     <td><input type="number" id="norm_var" value="2.25" disabled></td>
+                     <td><input type="number" id="norm_var" value="2.25" onchange="sample.setSTD('norm')"></td>
                   </tr>
                   <tr>
                      <td></td>
@@ -84,7 +84,7 @@
                   </tr>
                   <tr>
                      <td>&sigma;&sup2; (variance)</td>
-                     <td><input type="number" id="clt_var" value="2.25" disabled></td>
+                     <td><input type="number" id="clt_var" value="2.25" onchange="sample.setSTD('clt')"></td>
                   </tr>
                   <tr>
                      <td></td>
@@ -140,7 +140,7 @@
                   </tr>
                   <tr>
                      <td>&sigma;&sup2; (variance)</td>
-                     <td><input type="number" id="t_var" value="2.25" disabled></td>
+                     <td><input type="number" id="t_var" value="2.25" onchange="sample.setSTD('t')"></td>
                   </tr>
                   <tr>
                      <td>n (replicates)</td>
@@ -196,7 +196,7 @@
                   </tr>
                   <tr>
                      <td>&sigma;&sup2; (variance)</td>
-                     <td><input type="number" id="tt_var" value="2.25" disabled></td>
+                     <td><input type="number" id="tt_var" value="2.25" onchange="sample.setSTD('tt')"></td>
                   </tr>
                   <tr>
                      <td>n (replicates)</td>
@@ -250,7 +250,7 @@
                   </tr>
                   <tr>
                      <td>&sigma;&sup2; (variance)</td>
-                     <td><input type="number" id="F_var" value="2.25" disabled></td>
+                     <td><input type="number" id="F_var" value="2.25" onchange="sample.setSTD('F')"></td>
                   </tr>
                   <tr>
                      <td>n&#x2081;</td>
