@@ -3,6 +3,6 @@ Simulate data sets for analysis of variance. The code resides in 'simulate.js'. 
 normalize.css
 
 jstat.js for RNG and statistics
-chart.js (so fat a costum made chart plotting, may be replaced later by Chart.js)
+chart.js (so far a costum made chart plotting, may be replaced later by Chart.js)
 FileSaver.js (to download files)
 seedrandom.js as a RNG with seed capabilities

@@ -60,7 +60,7 @@ var ui = (function() {
           // in the variable 'terms'
           for ( let i = 0; i < terms.length; i++ ) newterms.push(terms[i] + "*" + name);
         } else {
-          // The new factor is nested into others. It is obligatorily a 'random' 
+          // The new factor is nested into others. It is mandatorily a 'random'
           // factor, so change its type.   
           f.ftype = 'random';
           // Update its name
@@ -138,7 +138,7 @@ var ui = (function() {
         elem.disabled = false;
         
       } else {
-        console.log('good but duplicate name:' + name)  
+        console.log('good but duplicated name:' + name)
         //fn.setCustomValidity("Invalid field.");
       }    
     } else {
@@ -152,7 +152,7 @@ var ui = (function() {
    * Build a list of all possible combinations of levels 
    * of factors assuming that all are orthogonal. Nested
    * factor's levels do not combine with all the levels 
-   * of the factors they'r nested in. This is corrected 
+   * of the factors they are nested in. This is corrected
    * later on by recodeNestedFactors();
    */
   
@@ -303,6 +303,8 @@ var ui = (function() {
      */
     
     document.getElementById("separator").disabled = false;
+
+    //console.log(factors);
     
   }
 
@@ -515,7 +517,7 @@ var ui = (function() {
         }
         text += lst.join(' and ');
       }    
-      text += '</td><td><input type="text" class="label" value="' + (i+1).toString() + '"';
+      text += '</td><td><input type="text" class="label" value="' + i.toString() + '"';
       text += ' onchange="ui.label(this)" ';
       text += ' id="flabel.' + fnum + '.' + i.toString() + '"></td></tr>';
     }    

@@ -37,7 +37,7 @@
         }
         text += lst.join(' and ');
       }    
-      text += '</td><td><input type="text" class="label" value="' + (i+1).toString() + '"';
+      text += '</td><td><input type="text" class="label" value="' + i.toString() + '"';
       text += ' onchange="ui.label(this)" ';
       text += ' id="flabel.' + fnum + '.' + i.toString() + '"></td></tr>';
     }    

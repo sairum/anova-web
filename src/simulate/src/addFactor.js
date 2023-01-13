@@ -51,7 +51,7 @@
           // in the variable 'terms'
           for ( let i = 0; i < terms.length; i++ ) newterms.push(terms[i] + "*" + name);
         } else {
-          // The new factor is nested into others. It is obligatorily a 'random' 
+          // The new factor is nested into others. It is mandatorily a 'random'
           // factor, so change its type.   
           f.ftype = 'random';
           // Update its name
@@ -129,7 +129,7 @@
         elem.disabled = false;
         
       } else {
-        console.log('good but duplicate name:' + name)  
+        console.log('good but duplicated name:' + name)
         //fn.setCustomValidity("Invalid field.");
       }    
     } else {

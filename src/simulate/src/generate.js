@@ -77,6 +77,8 @@
      */
     
     document.getElementById("separator").disabled = false;
+
+    //console.log(factors);
     
   }
 

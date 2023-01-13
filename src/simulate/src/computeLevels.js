@@ -3,7 +3,7 @@
    * Build a list of all possible combinations of levels 
    * of factors assuming that all are orthogonal. Nested
    * factor's levels do not combine with all the levels 
-   * of the factors they'r nested in. This is corrected 
+   * of the factors they are nested in. This is corrected
    * later on by recodeNestedFactors();
    */
   
