@@ -52,22 +52,23 @@
       let temp = { idx: 0, name: "", codes: [], order: 0, combins: 1, nlevels: 0,
                    levels: [], sumx: [], sumx2: [], n: [], average: [], ss: 0,
                    df: 1, SS: 0, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -1, 
-                   F: 0 };
+                   F: 0, type: FIXED };
                    
       for( let j = 0; j < nfactors; j++ ) {
           
         /*
          * Unfortunately, we need an additional attribute 'idx' to keep the order of
          * creation of the terms. The order will be: 
+         *
          * idx : term
          * -----------
-         * 0   : A 
-         * 1   : B
-         * 2   : A*B
-         * 3   : C
-         * 4   : A*C
+         * 1   : A
+         * 2   : B
+         * 3   : A*B
+         * 4   : C
+         * 5   : A*C
          * ...
-         * Note that the fourth term (idx = 3) is a main factor ('C'), but it is 
+         * Note that the fourth term (idx = 4) is a main factor ('C'), but it is
          * created after the interaction A*B. Later on, the list of terms of the ANOVA 
          * should be sorted according to the 'order' of terms (1 - for main factors, 
          * 2 - for 1st order interactions, 3 - for second order interactions, and so on). 
@@ -86,6 +87,7 @@
           temp.codes[j] = 1;
           temp.order++;
           temp.combins *= factors[j].nlevels;
+          temp.type *= factors[j].type;
         } else {
           temp.codes[j] = 0;
         }
@@ -147,7 +149,7 @@
       
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
-      
+
       //#DEBUG        
       displayTerms( "List of Terms" );
       //!DEBUG      

@@ -124,7 +124,7 @@
         for (let k = 0; k < nfactors; k++ ) {
           if( nfl[i].codes[k] == 1 ) nm.push(factors[k].name);  
         }
-        factors[j].name += "(" + nm.join("*") + ")";
+        factors[j].name += "(" + nm.join("&times;") + ")";
       } else {
         let j = nfl[i].codes.indexOf(1);
         let k = nfl[i].index;
@@ -144,7 +144,7 @@
           nm.push(factors[j].name);   
         } 
       }
-      terms[i].name = nm.join("*");
+      terms[i].name = nm.join("&times;");
     }
     
     //console.table(terms);

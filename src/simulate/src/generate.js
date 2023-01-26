@@ -62,7 +62,7 @@
     }        
     
     let elem = document.getElementById("result");  
-    elem.innerHTML = text;
+    elem.value = text;
     
     /*
      * Since the data exists, let's create a button
@@ -79,6 +79,6 @@
     document.getElementById("separator").disabled = false;
 
     //console.log(factors);
-    
+
   }
 

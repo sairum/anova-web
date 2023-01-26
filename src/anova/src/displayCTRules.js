@@ -68,7 +68,7 @@
     /*
      * Compute rows
      */
-    
+
     for(let i = 0, len = terms.length - 1; i < len; i++ ) {
       table += '<tr><td>' + terms[i].name + '</td>';
       
@@ -82,13 +82,17 @@
         dbgtable += '<td>' + terms[i].varcomp[j].toString() + '</td>';  
       }
       //!DEBUG
-      let est = [], name = "";
+      let est = [], name = "", vc = "&sigma";
+      // Start in the Error term ( index terms.length-2 ) and go upwards
+      // until term 0 (first main factor)
       for ( let j = terms.length - 2; j >= 0; j--) {
         if(terms[i].varcomp[j] > 0 ) {
           if( ( terms[j].name === 'Error') || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
           else name = terms[j].name;
-          if( terms[i].varcomp[j] === 1 ) est.push('&sigma;<sup>2</sup><sub>' + name + '</sub>');
-          else est.push(terms[i].varcomp[j].toString() + '*&sigma;<sup>2</sup><sub>' + name + '</sub>'); 
+          if( terms[j].type === RANDOM ) vc = "&sigma;";
+          else vc = "&Sigma;";
+          if( terms[i].varcomp[j] === 1 ) est.push(vc+'<sup>2</sup><sub>' + name + '</sub>');
+          else est.push(terms[i].varcomp[j].toString() + '&middot;'+vc+'<sup>2</sup><sub>' + name + '</sub>');
         }
       }
       table += '<td>' + est.join(' + ') + '</td></tr>';

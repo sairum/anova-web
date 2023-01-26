@@ -468,22 +468,23 @@ var anova = (function () {
       let temp = { idx: 0, name: "", codes: [], order: 0, combins: 1, nlevels: 0,
                    levels: [], sumx: [], sumx2: [], n: [], average: [], ss: 0,
                    df: 1, SS: 0, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -1, 
-                   F: 0 };
+                   F: 0, type: FIXED };
                    
       for( let j = 0; j < nfactors; j++ ) {
           
         /*
          * Unfortunately, we need an additional attribute 'idx' to keep the order of
          * creation of the terms. The order will be: 
+         *
          * idx : term
          * -----------
-         * 0   : A 
-         * 1   : B
-         * 2   : A*B
-         * 3   : C
-         * 4   : A*C
+         * 1   : A
+         * 2   : B
+         * 3   : A*B
+         * 4   : C
+         * 5   : A*C
          * ...
-         * Note that the fourth term (idx = 3) is a main factor ('C'), but it is 
+         * Note that the fourth term (idx = 4) is a main factor ('C'), but it is
          * created after the interaction A*B. Later on, the list of terms of the ANOVA 
          * should be sorted according to the 'order' of terms (1 - for main factors, 
          * 2 - for 1st order interactions, 3 - for second order interactions, and so on). 
@@ -502,6 +503,7 @@ var anova = (function () {
           temp.codes[j] = 1;
           temp.order++;
           temp.combins *= factors[j].nlevels;
+          temp.type *= factors[j].type;
         } else {
           temp.codes[j] = 0;
         }
@@ -559,7 +561,7 @@ var anova = (function () {
       
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
-      
+
 
       /*
        * Check if there are nested factors and correct the
@@ -1299,7 +1301,7 @@ var anova = (function () {
         for (let k = 0; k < nfactors; k++ ) {
           if( nfl[i].codes[k] == 1 ) nm.push(factors[k].name);  
         }
-        factors[j].name += "(" + nm.join("*") + ")";
+        factors[j].name += "(" + nm.join("&times;") + ")";
       } else {
         let j = nfl[i].codes.indexOf(1);
         let k = nfl[i].index;
@@ -1319,7 +1321,7 @@ var anova = (function () {
           nm.push(factors[j].name);   
         } 
       }
-      terms[i].name = nm.join("*");
+      terms[i].name = nm.join("&times;");
     }
     
     //console.table(terms);
@@ -1495,17 +1497,21 @@ var anova = (function () {
     /*
      * Compute rows
      */
-    
+
     for(let i = 0, len = terms.length - 1; i < len; i++ ) {
       table += '<tr><td>' + terms[i].name + '</td>';
       
-      let est = [], name = "";
+      let est = [], name = "", vc = "&sigma";
+      // Start in the Error term ( index terms.length-2 ) and go upwards
+      // until term 0 (first main factor)
       for ( let j = terms.length - 2; j >= 0; j--) {
         if(terms[i].varcomp[j] > 0 ) {
           if( ( terms[j].name === 'Error') || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
           else name = terms[j].name;
-          if( terms[i].varcomp[j] === 1 ) est.push('&sigma;<sup>2</sup><sub>' + name + '</sub>');
-          else est.push(terms[i].varcomp[j].toString() + '*&sigma;<sup>2</sup><sub>' + name + '</sub>'); 
+          if( terms[j].type === RANDOM ) vc = "&sigma;";
+          else vc = "&Sigma;";
+          if( terms[i].varcomp[j] === 1 ) est.push(vc+'<sup>2</sup><sub>' + name + '</sub>');
+          else est.push(terms[i].varcomp[j].toString() + '&middot;'+vc+'<sup>2</sup><sub>' + name + '</sub>');
         }
       }
       table += '<td>' + est.join(' + ') + '</td></tr>';
@@ -1866,7 +1872,7 @@ var anova = (function () {
                order: terms[tl-1].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: residual.df,
                SS: residual.ss, ct_codes: new Array(nfactors+1).fill(1), 
-               varcomp: [], MS: 0, P: 0, against: -2, F: 0 };
+               varcomp: [], MS: 0, P: 0, against: -2, F: 0, type: RANDOM };
                
     terms.push(te);
     
@@ -1874,7 +1880,7 @@ var anova = (function () {
                order: terms[tl].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: total.df,
                SS: total.ss, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -2,
-               F: 0 };
+               F: 0,type: RANDOM };
                
     terms.push(tt);    
     

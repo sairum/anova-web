@@ -225,7 +225,7 @@
                order: terms[tl-1].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: residual.df,
                SS: residual.ss, ct_codes: new Array(nfactors+1).fill(1), 
-               varcomp: [], MS: 0, P: 0, against: -2, F: 0 };
+               varcomp: [], MS: 0, P: 0, against: -2, F: 0, type: RANDOM };
                
     terms.push(te);
     
@@ -233,7 +233,7 @@
                order: terms[tl].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: total.df,
                SS: total.ss, ct_codes: [], varcomp: [], MS: 0, P: 0, against: -2,
-               F: 0 };
+               F: 0,type: RANDOM };
                
     terms.push(tt);    
     

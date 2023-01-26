@@ -10,7 +10,7 @@
   
   function separator() {
     let res = document.getElementById("result").value;
-    //console.log(res);
+
     let sep = document.getElementById("separator").value;
     if(sep == ".") {
       res = res.replace(/\,/g , ".");
@@ -23,6 +23,7 @@
       document.getElementById("separator").innerHTML = "Dec. separator = . (dot)";
     }  
     document.getElementById("result").value = res;
+    //console.log(res);
   }
   
   

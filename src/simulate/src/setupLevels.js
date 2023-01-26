@@ -1,4 +1,4 @@
-  
+
   function setupLevels(fnum) {
     let f = factors[fnum];
     f.true_levels = f.levels;
@@ -23,8 +23,9 @@
     d.className = 'tabcontent';
     d.id = f.name;
     
+    // At this stage the matrix 'recoded' holds
     //console.log(fnum,combins)
-    
+    console.log(f,combins,recoded);
     let text = '<h3>Labels for levels of Factor ' + f.name + '</h3><table>';
     for ( let i = 0; i < f.true_levels; i++ ) {
       text += '<tr><td><b>Level ' + (i+1).toString();
@@ -33,15 +34,17 @@
         text += '</b> nested in ';
         let lst = [];
         for ( let j = 0; j < f.nestedin.length; j++ ) {
-          lst.push( ' Level ' + (combins[i][j]+1).toString() + ' of Factor ' + factors[f.nestedin[j]].name );
+          lst.push( ' Level ' + factors[f.nestedin[j]].lcodes[combins[i][j]] + ' of Factor ' + factors[f.nestedin[j]].name );
         }
         text += lst.join(' and ');
       }    
       text += '</td><td><input type="text" class="label" value="' + i.toString() + '"';
       text += ' onchange="ui.label(this)" ';
       text += ' id="flabel.' + fnum + '.' + i.toString() + '"></td></tr>';
-    }    
-    
+    }
+    //console.log(f);
+    //console.log(factors);
+    //console.log(combins);
     text += "</table>";
     d.innerHTML = text;
     d.style.display = 'none';

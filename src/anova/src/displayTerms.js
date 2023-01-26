@@ -17,17 +17,22 @@
     
     // Build the table header
     
-    table += '<thead><tr><th>i</th><th>Order</th><th>Name</th><th>Codes</th><th>levels</th>'
+    table += '<thead><tr><th>idx</th><th>Order</th><th>Name</th><th>Type</th><th>Codes</th><th>levels</th>'
     table += '<th>combins</th><th>df</th><th>level codes</th><th>n</th>';
     table += '<th>averages</th><th>sumx</th><th>sumx2</th><th>ss</th><th>SS</th>'
     table += '<th>MS</th><th>F</th><th>Against</th></tr></thead><tbody>'; 
     
-    let a = [];
-    
+    let a  = [];
+    let tp = "";
+
     for(let i = 0, len = terms.length; i < len; i++ ) {
-      table += '<tr><td>' + i.toString() + '</td>';
+      table += '<tr><td>' + terms[i].idx.toString() + '</td>';
       table += '<td>'+terms[i].order.toString()+'</td>';
       table += '<td>'+terms[i].name+'</td>';
+      //table += '<td></td>';
+
+      (terms[i].type===RANDOM)?tp='RANDOM':tp='FIXED';
+      table += '<td>'+tp+'</td>';
       table += '<td>'+terms[i].codes.toString();+'</td>';
       table += '<td>'+terms[i].nlevels.toString()+'</td>';
       table += '<td>'+terms[i].combins.toString()+'</td>';
