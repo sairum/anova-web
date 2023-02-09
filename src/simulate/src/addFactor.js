@@ -37,7 +37,11 @@
         f.ftype = ftype.value;
         f.nestedin = [];
         f.effects = [];
-        f.lcodes = [...Array(f.levels).keys()];
+        f.lcodes = [];
+        //f.lcodes = [...Array(f.levels).keys()];
+        for ( let i = 0; i < f.levels; i++ ) {
+          f.lcodes.push( i.toString() );
+        }
         (nestedin.value == "-")?f.nested=false:f.nested=true; 
         // 'newterms' will hold all new terms that will appear after adding the 
         // current factor. It includes the factor being created plus any interactions
@@ -75,8 +79,11 @@
             } 
           }
           // Readjust level codes to the new number of levels
-          f.lcodes = [...Array(f.true_levels).keys()];
-
+          //f.lcodes = [...Array(f.true_levels).keys()];
+          f.lcodes = [];
+          for ( let i = 0; i < f.true_levels; i++ ) {
+            f.lcodes.push( i.toString() );
+          }
           // Add the new factor with its name already formatted
           // to the newterms list
           newterms.push( f.name ); 
@@ -129,11 +136,14 @@
         elem.disabled = false;
         
       } else {
-        console.log('good but duplicated name:' + name)
-        //fn.setCustomValidity("Invalid field.");
+        alert('Factor name: "' + name + '" already exits!\n' +
+              'Please, enter a different factor name.')
       }    
     } else {
-      console.log('bad name:' + name) 
+      alert('Bad factor name: "' + name + '"\n' +
+            '(The name is empty or contains illegal\n' +
+            'characters such as *, ?, etc.)\n\n' +
+            'Please, enter an alpha-numeric factor name.')
     }   
     //console.log(factors)
   }
