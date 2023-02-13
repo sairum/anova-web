@@ -57,8 +57,8 @@
         }  
       }
       terms[i].ct_codes[nfactors] = replicates;
-    }  
-    
+    }
+
     /*
      * Now check wich components contribute to the MS
      * of each term, including the "Error"

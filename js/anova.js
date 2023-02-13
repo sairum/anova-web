@@ -518,10 +518,6 @@ var anova = (function () {
     }
     
     
-    //#DEBUG
-    //console.table(terms)
-    //displayTerms("Unsorted and uncorrected terms");
-    //!DEBUG
     
     /*
      * Compute the 'partials' list, i.e., a list with all terms potentially
@@ -539,6 +535,7 @@ var anova = (function () {
        */
       
       terms.sort( function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
+
       
       /*
        * Recompute MSs and dfs for all terms. Do not do this for the "Error" and 
@@ -566,9 +563,8 @@ var anova = (function () {
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
 
-      //#DEBUG        
-      displayTerms( "List of Terms" );
-      //!DEBUG      
+
+
 
       /*
        * Check if there are nested factors and correct the
@@ -577,10 +573,7 @@ var anova = (function () {
       
       correctForNesting();
       
-      //#DEBUG   
-      displayFactors(); 
-      //!DEBUG     
-      
+
       /*
        * Compute Cornfield-Tukey rules to determine
        * denominators for the F-tests
@@ -588,9 +581,6 @@ var anova = (function () {
       
       computeCTRules();
       
-      //#DEBUG 
-      displayTerms( "List of Corrected Terms" );
-      //!DEBUG      
       
       /*
        * Display tables of averages per factor or combinations of factors
@@ -678,8 +668,8 @@ var anova = (function () {
         }  
       }
       terms[i].ct_codes[nfactors] = replicates;
-    }  
-    
+    }
+
     /*
      * Now check wich components contribute to the MS
      * of each term, including the "Error"
@@ -1008,9 +998,6 @@ var anova = (function () {
     
     replicates = partials[0].n;
     
-    //#DEBUG    
-    displayPartials();
-    //!DEBUG    
     
     /*
      * It's time to compute homogeneity tests for this data set
@@ -1172,10 +1159,6 @@ var anova = (function () {
       current++;  
     }
     
-    //#DEBUG    
-    //display.Factors( factors );
-    //display.Terms("Terms before correcting for nesting", terms);
-    //!DEBUG
     
     correctTermNames();
 
@@ -1480,110 +1463,113 @@ var anova = (function () {
   function displayCTRules( ) {
     
     let c = document.getElementById('ctrules'); 
-    
-    //#DEBUG
-    let d = document.getElementById("debug"); 
-    //!DEBUG
+
     
     let table = '<div class="ct"><table><thead>';
-    
-    //#DEBUG
-    let dbgtable = '<h5>Cornfield-Tukey Rules</h5>' + table;
-    //!DEBUG
-    
+
+
     /*
      * Build the header of the table. First column for the ANOVA term name
      */
-    
+
     table += '<tr><th>Term</th>';
-    
-    //#DEBUG
-    dbgtable += '<tr><th>Term</th>';
-    //!DEBUG
-    
+
+
     /*
      * Now add one column for each subscript associated with each factor,
      * plus one column for the Error. This is the CT table of multipliers,
      * and its display is just for debugging purposes
      */
-    
-    //#DEBUG
-    for ( let i = 0, len = factors.length + 1; i < len; i++) {
-      dbgtable += '<th>' + String.fromCharCode(i+105) + '</th>';  
-    }  
-    //!DEBUG
-    
+
+
     /*
      * We should build a table with as many columns as ANOVA terms (including
      * the Error term) which will display the components of variance measured
-     * by each term. Again, displaying this is only necessary while debugging 
+     * by each term. Again, displaying this is only necessary while debugging
      */
-    
-    //#DEBUG
-    for ( let i = terms.length - 2; i >= 0; i--) {
-      dbgtable += '<th>' + terms[i].name + '</th>';  
-    }
-    //!DEBUG
-    
+
+
     /*
      * Finally a column to display which variance components are estimated
      * by each term
      */
-    
+
     table += '<th>Estimates</th></tr></thead><tbody>';
-    
-    //#DEBUG
-    dbgtable += '<th>Estimates</th></tr></thead><tbody>';
-    //!DEBUG
+
     
     /*
-     * Compute rows
+     * Compute CT rows. If DEBUG is set the table is more complex than
+     * for regular operation, where we need only the factor or interaction
+     * names and the list of variance components involved in the term (these
+     * are stored in 'terms[i].varcomp[j]' for term 'i' and component 'j')
+     *
+     * For displaying the CT Rules in DEBUG mode we also need the list of
+     * CT coefficients per subscript, one subscript per factor plus the
+     * Error term. These are stored in 'terms[i].ct_codes[j]' for term 'i'
+     * and component 'j'.
+     *
+     * The 'terms[i].varcomp[j]' should be printed in reverse order because
+     * the members of this vector are stored according to the order of terms,
+     * main factors first, first order interactions next, and so on, the error
+     * term being the last entry. When displaying variance components in
+     * CT Rules, practice dictates that we should start by the Error or Residual
+     * and move up to main factors.
+     *
+     * The above rule is solved by using a reverse 'for' loop for all the
+     * 'terms[i].varcomp[j]' of term 'i', and works well in all cases. However,
+     * there are specific cases where the last variance component might not be
+     * the factor or interaction corresponding to a given row 'i'. Even though
+     * all computations still work, the CT Rules table is not the best. Consider
+     * the case of three factors (A,B, and C) where C is nested in the A*B
+     * (interaction). Using the simple reverse for loop the result was:
+     *
+     * Term      Estimates
+     * A         σ²ε + 4σ²C(A*B) + 16Σ²A
+     * B         σ²ε + 4σ²C(A*B) + 16Σ²B
+     * C(A*B)    σ²ε + 4σ²C(A*B)
+     * A*B       σ²ε + 8Σ²A*B + 4σ²C(A*B)
+     * Residual  σ²ε
+     *
+     * Note that A*B should be "σ²ε + 4σ²C(A*B) + 8Σ²A*B", that is the
+     * component 8Σ²A*B should be the last component. But because it is an
+     * interaction, the main factor C (nested inside it) has precedence and
+     * created this effect. So, to achieve the desired effect, while traversing
+     * the list of components from the Error/Residual to the main factors, we
+     * "save " the ignore the component corresponding to the term being
+     * considered ('i') and add it as the last component to the list of
+     * variance components.
+     *
      */
 
     for(let i = 0, len = terms.length - 1; i < len; i++ ) {
       table += '<tr><td>' + terms[i].name + '</td>';
       
-      //#DEBUG
-      dbgtable += '<tr><td>' + terms[i].name + '</td>';
-      
-      for ( let j = 0, len = factors.length +1; j < len; j++) {
-        dbgtable += '<td>' + terms[i].ct_codes[j].toString() + '</td>';
-      }    
-      for ( let j = terms.length - 2; j >= 0; j--) {
-        dbgtable += '<td>' + terms[i].varcomp[j].toString() + '</td>';  
-      }
-      //!DEBUG
-      let est = [], name = "", vc = "&sigma";
+      let est = [], name = "", vc = "&sigma", component = "", maincomp="";
       // Start in the Error term ( index terms.length-2 ) and go upwards
       // until term 0 (first main factor)
       for ( let j = terms.length - 2; j >= 0; j--) {
-        if(terms[i].varcomp[j] > 0 ) {
-          if( ( terms[j].name === 'Error') || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
+        if( terms[i].varcomp[j] > 0 ) {
+          if( ( terms[j].name === 'Error' ) || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
           else name = terms[j].name;
           if( terms[j].type === RANDOM ) vc = "&sigma;";
           else vc = "&Sigma;";
-          if( terms[i].varcomp[j] === 1 ) est.push(vc+'<sup>2</sup><sub>' + name + '</sub>');
-          else est.push(terms[i].varcomp[j].toString() + '&middot;'+vc+'<sup>2</sup><sub>' + name + '</sub>');
+          if( terms[i].varcomp[j] === 1 ) component = vc+'<sup>2</sup><sub>' + name + '</sub>';
+          else component = terms[i].varcomp[j].toString() + '&middot;'+vc+'<sup>2</sup><sub>' + name + '</sub>';
+          if ( i != j ) est.push( component );
+          else maincomp = component;
         }
       }
+      est.push(maincomp);
+
       table += '<td>' + est.join(' + ') + '</td></tr>';
       
-      //#DEBUG
-      dbgtable += '<td>' + est.join(' + ') + '</td></tr>';
-      //!DEBUG
     }
     
     table += '</tbody></table></div>';
     
-    //#DEBUG
-    dbgtable += '</tbody></table></div>';
-    //!DEBUG
     
     c.innerHTML = table;
     
-    //#DEBUG
-    d.innerHTML += dbgtable;
-    //!DEBUG
   } 
   /*************************************************************************/
   /*                                                                       */
@@ -1649,42 +1635,6 @@ var anova = (function () {
   /*                                                                       */
   /*************************************************************************/ 
   
-  //#DEBUG
-  function displayFactors() {
-    
-    // Get the 'anova_debug' <div> to append data
-    
-    let d = document.getElementById('debug'); 
-    
-    // Create the table as a whole text bunch of HTML to avoid
-    // multiple calls to the DOM structure
-  
-    let table = '<h5>Factors</h5><div><table>';
-    
-    // Append the header
-    
-    table += '<thead><tr><th>Name</th><th>Subs.</th><th>Type</th><th>Levels</th><th>Levels\' Codes</th><th>Nested in</th></tr></thead><tbody>';
-    
-    // Append rows
-    
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<tr>';
-      table += '<td>' + factors[i].name + '</td>';
-      table += '<td>' + factors[i].subscript + '</td>';
-      table += '<td>' + factors[i].type + '</td>';
-      table += '<td>' + factors[i].nlevels.toString() + '</td>';
-      table += '<td>' + factors[i].levels.toString(); + '</td>';
-      table += '<td>' + factors[i].nestedin.toString(); + '</td>';
-      table += '</tr>';
-    }
-    
-    table += '</tbody></table><div>';
-    
-    d.innerHTML += table;
-    //let j = JSON.stringify(factors);
-    //console.table(JSON.parse(j))
-  }
-  //!DEBUG
   /*************************************************************************/
   /*                                                                       */
   /*                            displayAverages                            */
@@ -1732,44 +1682,6 @@ var anova = (function () {
   /*                                                                       */     
   /*************************************************************************/ 
   
-  //#DEBUG
-  function displayPartials() {
-
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>List of Partials</h5><div><table><thead>';
-    
-    table += '<tr>';
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<th>' + factors[i].name + '</th>';
-    }
-    
-    table += '<th>n orig.</th><th>n</th><th>sumx</th><th>sumx2</th><th>ss</th></thead><tbody>';
-    
-    for(let i = 0, len = partials.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, l = partials[i].codes.length; j < l; j++ ) {
-        let c = partials[i].codes[j];
-        let name = factors[j].levels[c];
-        table += '<td>' + name + '</td>';
-      }
-      table += '<td>' + partials[i].n_orig.toString() + '</td>';
-      table += '<td>' + partials[i].n.toString() + '</td>';
-      table += '<td>' + partials[i].sumx.toString() + '</td>';
-      table += '<td>' + partials[i].sumx2.toString() + '</td>';
-      table += '<td>' + partials[i].ss.toString() + '</td>';
-      table += '</tr>';
-    }
-
-    table += "</tbody></table></div>";
-
-    table += '<h5>Replicates</h5><div class="contentor"><table><thead>';
-    table += '<tr><td>Replicates</td></tr></thead><tbody><tr><td>';
-    table += replicates + '</td></tr></tnody></table></div>';
-    
-    d.innerHTML += table;
-  }
-  //!DEBUG
 
   /*************************************************************************/
   /*                                                                       */
@@ -1780,58 +1692,6 @@ var anova = (function () {
   /*                                                                       */
   /*************************************************************************/   
   
-  //#DEBUG
-  function displayTerms( title = '') {
-  
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>' + title + '</h5><table>';
-    
-    // Build the table header
-    
-    table += '<thead><tr><th>idx</th><th>Order</th><th>Name</th><th>Type</th><th>Codes</th><th>levels</th>'
-    table += '<th>combins</th><th>df</th><th>level codes</th><th>n</th>';
-    table += '<th>averages</th><th>sumx</th><th>sumx2</th><th>ss</th><th>SS</th>'
-    table += '<th>MS</th><th>F</th><th>Against</th></tr></thead><tbody>'; 
-    
-    let a  = [];
-    let tp = "";
-
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      table += '<tr><td>' + terms[i].idx.toString() + '</td>';
-      table += '<td>'+terms[i].order.toString()+'</td>';
-      table += '<td>'+terms[i].name+'</td>';
-      //table += '<td></td>';
-
-      (terms[i].type===RANDOM)?tp='RANDOM':tp='FIXED';
-      table += '<td>'+tp+'</td>';
-      table += '<td>'+terms[i].codes.toString();+'</td>';
-      table += '<td>'+terms[i].nlevels.toString()+'</td>';
-      table += '<td>'+terms[i].combins.toString()+'</td>';
-      table += '<td>'+terms[i].df.toString()+'</td>';
-      a = terms[i].levels.slice();
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].n.slice();
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].average.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].sumx.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      a = terms[i].sumx2.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>'+a.join(' : ')+'</td>';
-      table += '<td>'+terms[i].ss.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].SS.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].MS.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].F.toFixed(3)+'</td>';
-      table += '<td>'+terms[i].against+'</td>';
-    }
-    table +='</tbody></table>';
-    d.innerHTML += table;
-  }
-  //!DEBUG
   
   /*************************************************************************/
   /*                                                                       */
@@ -1863,7 +1723,7 @@ var anova = (function () {
        * each factor excluded). Note that there is an additional code for 
        * the "Error" in the end which is always 0 except for the "Error" 
        * term itself. For a three-way ANOVA, [1,0,0,0], [0,1,0,0] and 
-       * [0,0,1.0] correspond to main factors, [1,1,0,0], [1,0,1,0], and
+       * [0,0,1,0] correspond to main factors, [1,1,0,0], [1,0,1,0], and
        * [0,1,1,0] correspond to first order interactions, and [1,1,1,0] 
        * corresponds to the unique second order interaction.   
        */
@@ -2071,10 +1931,6 @@ var anova = (function () {
                
     terms.push(tt);    
     
-//#DEBUG    
-    //console.log("Table of Terms")
-    //console.table(terms)
-//!DEBUG
     
     return true;
   }   
@@ -2737,9 +2593,6 @@ var anova = (function () {
         let elem = document.getElementsByClassName("tabcontent");
         for ( let i = 0, len = elem.length; i < len; i++ ) elem[i].innerHTML="";
         
-        //#DEBUG - Display Table of Factors 
-        displayFactors();
-        //!DEBUG
         
         displayData();
         
@@ -3043,28 +2896,6 @@ function selectTab(name) {
 document.addEventListener('DOMContentLoaded', function () {
     
     
-    //#DEBUG 
-
-    /*
-     * Append 'debug' tab and corresponding <a href> if in Debug Mode
-     */
-    
-    let t = document.getElementById('tab-contents');
-    let d = document.createElement('div');
-    d.className = 'tabcontent';
-    d.id = 'debug'; 
-    t.appendChild(d);
-    
-    t = document.getElementById('tabs');
-    d = document.createElement('a');
-    d.name = 'debug';
-    d.className = 'tabs';
-    d.href = '#!';
-    d.onclick = function () { selectTab('debug'); };
-    d.innerHTML = 'Debug';
-    t.appendChild(d);
-    
-    //!DEBUG
     
     
     // Hide all tab contents

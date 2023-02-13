@@ -29,7 +29,7 @@
        * each factor excluded). Note that there is an additional code for 
        * the "Error" in the end which is always 0 except for the "Error" 
        * term itself. For a three-way ANOVA, [1,0,0,0], [0,1,0,0] and 
-       * [0,0,1.0] correspond to main factors, [1,1,0,0], [1,0,1,0], and
+       * [0,0,1,0] correspond to main factors, [1,1,0,0], [1,0,1,0], and
        * [0,1,1,0] correspond to first order interactions, and [1,1,1,0] 
        * corresponds to the unique second order interaction.   
        */

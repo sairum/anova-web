@@ -104,7 +104,7 @@
     
     //#DEBUG
     //console.table(terms)
-    //displayTerms("Unsorted and uncorrected terms");
+    displayTerms("Unsorted and uncorrected terms");
     //!DEBUG
     
     /*
@@ -123,6 +123,7 @@
        */
       
       terms.sort( function(a,b){return (a.order - b.order) || (a.idx - b.idx)} );
+
       
       /*
        * Recompute MSs and dfs for all terms. Do not do this for the "Error" and 
@@ -154,6 +155,8 @@
       displayTerms( "List of Terms" );
       //!DEBUG      
 
+
+
       /*
        * Check if there are nested factors and correct the
        * ANOVA terms if necessary
@@ -164,7 +167,7 @@
       //#DEBUG   
       displayFactors(); 
       //!DEBUG     
-      
+
       /*
        * Compute Cornfield-Tukey rules to determine
        * denominators for the F-tests
