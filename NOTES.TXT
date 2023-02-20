@@ -1,0 +1,52 @@
+# function name # means only in DEBUG mode
+
+openDataFile()
+  |
+  |-- resetAnalysis()
+  |
+  |-- # displayFactors() #
+  |
+  |-- displayData()
+  |     |
+  |     |-- displayDataTable()
+  |
+  |-- computePartials()
+        |
+        |-- # displayPartials() #
+        |
+        |-- homogeneityTests()
+        |
+        |-- buildTerms()
+              |
+              |-- # displayTerms() #
+              |
+              |
+              |-- IF -- getPartialSS()
+                   |
+                   |-- displayTerms()
+                   |
+                   |-- correctForNesting()
+                   |     |
+                   |     |-- # displayFactors() #
+                   |     |
+                   |     |-- # displayTerms() #
+                   |     |
+                   |     |-- correctTermNames()
+                   |
+                   |-- # displayFactors() #
+                   |
+                   |-- computeCTRules()
+                   |     |
+                   |     |-- displayCTRules()
+                   |
+                   |-- # displayTerms() #
+                   |
+                   |-- displayAverages()
+                   |
+                   |-- buildMultipleComparisons()
+                   |
+                   |-- displayANOVA()
+
+
+
+

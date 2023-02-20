@@ -1,16 +1,20 @@
 
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayAverages                            */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the averages */
-  /* for each term in the ANOVA. This information may be useful to graph   */
-  /* data further on or simply to check if the analysis has ben correctly  */
-  /* done.                                                                 */
-  /*                                                                       */
-  /*************************************************************************/ 
+  /****************************************************************************/
+  /*                                                                          */
+  /*                              displayAverages                             */
+  /*                                                                          */
+  /*  This function displays a small table with the summary of the averages   */
+  /*  for each term in the ANOVA. This information may be useful to graph     */
+  /*  data further on or simply to check if the analysis has ben correctly    */
+  /*  done.                                                                   */
+  /*                                                                          */
+  /****************************************************************************/
   
   function displayAverages() {
+
+    //#DEBUG
+    console.log('displayAverages() called');
+    //!DEBUG
         
     let d = document.getElementById('averages'); 
     
@@ -21,7 +25,7 @@
     
     for(let i = 0, len = terms.length - 2; i < len; i++ ) {
        
-      table += '<h3>Averages for ' + terms[i].name + '</h3>'; 
+      table += '<h3>Averages for ' + terms[i].name + '</h3>';
       
       table += '<table><thead><tr>';
       
@@ -31,7 +35,8 @@
         else table += '<th>' + factors[j].name + '</th>';
       }  
       
-      table += '<th>Average</th><th>n</th><th>St. Dev.</th><th>Variance</th></tr></thead><tbody>'; 
+      table += '<th>Average</th><th>n</th><th>St. Dev.</th>' +
+               '<th>Variance</th></tr></thead><tbody>';
       
       for(let j = 0, jlen = terms[i].average.length; j < jlen; j++ ) { 
         table += '<tr>';  
@@ -46,8 +51,11 @@
         table += '<td>' + n.toString() + '</td>';
         
         let std = 0, variance = 0;
-        if( n > 1 ) variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n)/(n-1);
-        std = Math.sqrt(variance,2);
+        if( n > 1 ) {
+          variance = (terms[i].sumx2[j] - Math.pow(terms[i].sumx[j],2)/n);
+          variance = variance/(n-1);
+          std = Math.sqrt(variance,2);
+        }
         
         table += '<td>' + std.toString() + '</td>';
         table += '<td>' + variance.toString() + '</td>';
@@ -57,3 +65,4 @@
     }
     d.innerHTML = table;
   }
+

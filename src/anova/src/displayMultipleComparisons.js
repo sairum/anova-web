@@ -1,25 +1,28 @@
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayAverages                            */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the averages */
-  /* for each term in the ANOVA. This information may be useful to graph   */
-  /*                                                                       */
-  /*************************************************************************/ 
+  /****************************************************************************/
+  /*                                                                          */
+  /*                        displayMultipleComparisons                        */
+  /*                                                                          */
+  /*  This function displays multiple comparison between averages of factors  */
+  /*  or interactions levels for which the F statistics surpasses a given     */
+  /*  rejection criterion, usually set in 'Settings' (default is 0.05)        */
+  /*                                                                          */
+  /****************************************************************************/
   
   function displayMultipleComparisons() {
+
+    //#DEBUG
+    console.log('displayMultipleComparisons() called');
+    //!DEBUG
         
     let d = document.getElementById('mtests'); 
     
     // Create the text as a whole bunch of HTML to avoid
     // multiple calls to the DOM structure
     
-    /*
-     * Provide two <divs>: one for selecting the type of test and the other
-     * to display the results of the multiple tests, identified by the
-     * id = 'mtest_results', but invisible (style="display:none") for now. 
-     */
-    
+    // Provide two <divs>: one for selecting the type of test and the other
+    // to display the results of the multiple tests, identified by the
+    // id = 'mtest_results', but invisible (style="display:none") for now.
+
     let text = '<div class="ct">' +
             '<h3>Multiple Comparison Tests</h3>' +
             '<p><input type="radio" name="test" value="none" checked>None</p>' +

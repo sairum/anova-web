@@ -2,22 +2,23 @@
 
 var anova = (function () {
      
-  /*************************************************************************/
-  /*                                                                       */
-  /*                             Global Variables                          */
-  /*                                                                       */
-  /*************************************************************************/  
-  
-  /*
-   * Define these two constants which denote factor types. The choice of 0 
-   * for 'random' is not irrelevant. Terms in a ANOVA may be combinations of 
-   * two or more factors, called 'interactions'. An interaction may also 
-   * have a "type". If the interaction involes only fixed factors it's also 
-   * an interaction of fixed type, but if it involves at least one random factor 
-   * it becomes a random type interaction. Hence, to determine the type of any 
-   * term in the ANOVA one only has to multiply the types of all factors 
-   * involved in the term. A result of zero means a random type interaction!
-   */
+  /****************************************************************************/
+  /*                                                                          */
+  /*                              Global Variables                            */
+  /*                                                                          */
+  /****************************************************************************/
+
+
+  // Define these two constants which denote factor types. The choice of 0
+  // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
+  // two or more factors, called 'interactions'. An interaction may also
+  // have a "type". If the interaction involes only fixed factors it's also
+  // an interaction of fixed type, but if it involves at least one random
+  // factor it becomes a random type interaction. Hence, to determine the
+  // type of any term in the ANOVA one only has to multiply the types of all
+  // factors involved in the term. A result of zero means a random type
+  // interaction!
+
   
   const RANDOM  = 0;
   
@@ -81,7 +82,7 @@ var anova = (function () {
   // the following information is compiled:                                             
   //                                                                      
   // name    : The name of a term; can be a single name for a main factor
-  //           or a combination of names separated by '*' (e.g., A*B*C)  
+  //           or a combination of names separated by 'x' (e.g., AxBxC)
   //           for interactions
   // codes   : an array with as many cells as the number of factors, filled
   //           with 0s; it will have 1s in cells corresponding to main
@@ -131,22 +132,32 @@ var anova = (function () {
 
   var total = {df: 0, ss: 0};
 
-  var residual = {name: "Error", df: 0, ss: 0};
+  var residual = {name: 'Error', df: 0, ss: 0};
   
   // Start by assuming that all factors are orthogonal; if later
   // on it's found that they are not, 'nesting' becomes true
   
   var nesting = false;
 
+  // Do not show multiple tests for main factors that
+  // participate in significant interactions
+
+  var ignoreinteractions = false;
+
+
   var max_value = Number.MIN_SAFE_INTEGER;
 
   var min_value = Number.MAX_SAFE_INTEGER;  
 
-  // default rejection criteria for the F tests (alpha)
-  var rejection_level = 0.05;
+  // default rejection level (alpha)
+  const DEFAULT_REJECTION_LEVEL = 0.05;
+
+  // set default rejection level for ANOVA F tests
+  var rejection_level = DEFAULT_REJECTION_LEVEL;
   
-  // default rejection criteria for multiple tests (alpha)
-  var mt_rejection_level = 0.05;
+  // set default rejection level for multiple tests
+  var mt_rejection_level = DEFAULT_REJECTION_LEVEL;
   
-  var filename= "";
+  var filename= '';
+
 

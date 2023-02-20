@@ -1,55 +1,55 @@
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayData                                */
-  /*                                                                       */
-  /* This function displays all data in a form of a table                  */
-  /*                                                                       */
-  /*************************************************************************/ 
+  /****************************************************************************/
+  /*                                                                          */
+  /*                                 displayData                              */
+  /*                                                                          */
+  /*          This function displays all data in a form of a table            */
+  /*                                                                          */
+  /****************************************************************************/
 
   function displayData() {
+
+    //#DEBUG
+    console.log('displayData() called');
+    //!DEBUG
     
-    let tb = document.getElementById("data");
-    
+    let tb = document.getElementById('datatab');
+
+    let table = '<div class="ct" id="datatable"></div>';
+
     // Panel to transform data
 
-    let table = '<div class="ct">' +
-        '<h3>Transformations</h3>'+
-        '<p><input type="radio" name="transf" value="none" checked>None</p>' +
-        '<p><input type="radio" name="transf" value="sqrt">&radic;X</p>' +
-        '<p><input type="radio" name="transf" value="sqrt3">&#8731;X</p>' +
-        '<p><input type="radio" name="transf" value="sqrt4">&#8732;X</p>' +
-        '<p><input type="radio" name="transf" value="log">Log(X+1)</p>' +
-        '<p><input type="radio" name="transf" value="ln">Ln(X+1)</p>' +
-        '<p><input type="radio" name="transf" value="arcsin">arcsin(X)</p>' +
-        '<p><input type="radio" name="transf" value="mult">X &times; <input type="number" id="multc" value="100"></p>' +
-        '<p><input type="radio" name="transf" value="div">X &divide; <input type="number"  id="divc" value="100"></p>' +
-        '<p><input type="radio" name="transf" value="pow">X&#8319; <input type="number"  id="powc" value="0.25"></p>' +
-        '<p><button onclick="anova.transformData()">Apply</button></p>' +
-        '<p><button onclick="anova.resetData()">Reset</button></p>' +
-        '</div>';
-        
-    table += '<div class="ct">';
-    
-    // Build table header with factor names
-    
-    table += '<table><thead><tr>';
-    for(let i = 0, nf = factors.length; i < nf; i++ ) {
-      table += '<th>'+factors[i].name+'</th>';
-    }  
-    table += '<th>DATA</th></tr></thead><tbody>';
-    
-    // Now insert as much data points rows as needed
-    
-    for( let i = 0, len = data.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, nf = factors.length; j < nf; j++ ) {
-        table += '<td>' + data[i].levels[j] + '</td>';
-      }  
-      table += '<td>'+data[i].value.toString()+'</td></tr>';
-    }  
-    table += '</tbody></table></div>';
-    
-
+    table += '<div class="ct">' +
+      '<h3>Transformations</h3>'+
+      '<p><input type="radio" name="transf" value="none"' +
+      ' onclick="anova.transformData(0)" checked>None</p>' +
+      '<p><input type="radio" name="transf" value="sqrt"' +
+      ' onclick="anova.transformData(1)">&radic;X</p>' +
+      '<p><input type="radio" name="transf" value="sqrt3"' +
+      ' onclick="anova.transformData(2)">&#8731;X</p>' +
+      '<p><input type="radio" name="transf" value="sqrt4"' +
+      ' onclick="anova.transformData(3)">&#8732;X</p>' +
+      '<p><input type="radio" name="transf" value="log"' +
+      ' onclick="anova.transformData(4)">Log(X+1)</p>' +
+      '<p><input type="radio" name="transf" value="ln"' +
+      ' onclick="anova.transformData(5)">Ln(X+1)</p>' +
+      '<p><input type="radio" name="transf" value="arcsin"' +
+      ' onclick="anova.transformData(6)">arcsin(X)</p>' +
+      '<p><input type="radio" name="transf" value="mult"' +
+      ' onclick="anova.transformData(7)">X &times;' +
+      ' <input type="number" id="multc" value="100"></p>' +
+      '<p><input type="radio" name="transf" value="div"' +
+      ' onclick="anova.transformData(8)">X &divide;' +
+      ' <input type="number"  id="divc" value="100"></p>' +
+      '<p><input type="radio" name="transf" value="pow"' +
+      ' onclick="anova.transformData(9)">X&#8319;' +
+      ' <input type="number"  id="powc" value="0.25"></p>' +
+      '</div>';
 
     tb.innerHTML  = table;
+
+    // Now calldisplaydataTable() to update data values as
+    // a table on <div> 'datatable'
+
+    displayDataTable();
   }
+

@@ -1,15 +1,19 @@
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayFactors                             */
-  /*                                                                       */
-  /* This function displays a small table with the summary of the factors, */
-  /* their types, names and number of levels, derived from the data file   */
-  /*                                                                       */
-  /*************************************************************************/ 
-  
+  /****************************************************************************/
+  /*                                                                          */
+  /*                              displayFactors                              */
+  /*                                                                          */
+  /*   This function displays a small table with the summary of the factors,  */
+  /*   their types, names and number of levels, derived from the data file    */
+  /*                                                                          */
+  /****************************************************************************/
+
   //#DEBUG
+
+
   function displayFactors() {
-    
+
+    console.log('displayFactors() called');
+
     // Get the 'anova_debug' <div> to append data
     
     let d = document.getElementById('debug'); 
@@ -21,7 +25,9 @@
     
     // Append the header
     
-    table += '<thead><tr><th>Name</th><th>Subs.</th><th>Type</th><th>Levels</th><th>Levels\' Codes</th><th>Nested in</th></tr></thead><tbody>';
+    table += '<thead><tr><th>Name</th><th>Subs.</th>' +
+             '<th>Type</th><th>Levels</th><th>Levels\' Codes</th>' +
+             '<th>Nested in</th></tr></thead><tbody>';
     
     // Append rows
     
@@ -39,7 +45,6 @@
     table += '</tbody></table><div>';
     
     d.innerHTML += table;
-    //let j = JSON.stringify(factors);
-    //console.table(JSON.parse(j))
+
   }
   //!DEBUG

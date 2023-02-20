@@ -1,16 +1,18 @@
-  /*************************************************************************/
-  /*                                                                       */
-  /*                            displayPartials                            */
-  /*                                                                       */
-  /* This function displays a table with the list of 'partials'. Each      */
-  /* partial represents a unique combination between levels of every factor*/
-  /* present, and contains the accummulated sums of all observations       */
-  /* ('sumx'), and sums of all squared observations ('sumx2)               */
-  /*                                                                       */     
-  /*************************************************************************/ 
+  /****************************************************************************/
+  /*                                                                          */
+  /*                              displayPartials                             */
+  /*                                                                          */
+  /* This function displays a table with the list of 'partials'. Each partial */
+  /* represents a unique combination between levels of every factor present,  */
+  /* and contains the accummulated sums of all observations ('sumx'), and     */
+  /* sums of all squared observations ('sumx2)                                */
+  /*                                                                          */
+  /****************************************************************************/
   
   //#DEBUG
   function displayPartials() {
+
+    console.log('displayPartials() called');
 
     let d = document.getElementById('debug'); 
     
@@ -21,7 +23,8 @@
       table += '<th>' + factors[i].name + '</th>';
     }
     
-    table += '<th>n orig.</th><th>n</th><th>sumx</th><th>sumx2</th><th>ss</th></thead><tbody>';
+    table += '<th>n orig.</th><th>n</th><th>sumx</th>' +
+             '<th>sumx2</th><th>ss</th></thead><tbody>';
     
     for(let i = 0, len = partials.length; i < len; i++ ) {
       table += '<tr>';
@@ -47,3 +50,4 @@
     d.innerHTML += table;
   }
   //!DEBUG
+

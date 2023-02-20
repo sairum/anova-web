@@ -18,12 +18,13 @@
           <div class="main">
             <button class="button" id="openFile">Load data</button>
             <span id="filename"></span>
+            <button class="right" id="help">Help</button><button class="right" id="activate_settings">Settings</button>
           </div>
           
-          <div class="main">
+          <div class="main" id="anovadisplay">
             <div id="tabs">
               <a href="#!" name="analysis" class="tabs" onclick="selectTab('analysis')">Analysis</a>
-              <a href="#!" name="data"     class="tabs" onclick="selectTab('data')">Data</a>
+              <a href="#!" name="datatab"  class="tabs" onclick="selectTab('datatab')">Data</a>
               <a href="#!" name="ctrules"  class="tabs" onclick="selectTab('ctrules')">Cornfield-Tukey Rules</a>
               <a href="#!" name="homogen"  class="tabs" onclick="selectTab('homogen')">Homoscedasticity</a>
               <a href="#!" name="mtests"   class="tabs" onclick="selectTab('mtests')">Multiple Tests</a>
@@ -35,7 +36,7 @@
               <div class="tabcontent" id="analysis">
               </div>
 
-              <div class="tabcontent" id="data">
+              <div class="tabcontent" id="datatab">
               </div>
 
               <div class="tabcontent" id="ctrules">
@@ -53,6 +54,28 @@
             </div>
           </div>
 
+          <div class="main" id="settings">
+            <table>
+            <thead><tr><td>Setting</td><td>Value</td><td>Description</td></tr></thead>
+            <tbody>
+              <tr>
+              <td>Ignore interactions</td>
+              <td><input type="checkbox" id="ignore_interactions" onchange="anova.ignoreInteractions()" ></td>
+              <td>Check if you want to see multiple <em>a posteriori</em> comparison tests for main factors that are involved in significant
+              interactions with other factors.</td>
+              </tr>
+              <tr>
+              <td>Rejection criteria (&alpha;)</td>
+              <td><input type="number" id="anova_alpha" value="0.05" min="0.00000" max="0.999999" step="0.05" onchange="anova.setAlpha()"/></td>
+              <td>Rejection criterium for H<sub>0</sub> in main ANOVA tests. For each term (row) in the ANOVA table, if the probability of the F statistic
+                  is smaller than this value, it is displayed in <b><em>emphasized bold</em></b> font. For each term, you should interpret the probabilities
+                  in the ANOVA table as the probability of obtaining an F value equal or larger than the observed F value.</td>
+              </tr>
+
+            </tbody>
+            </table>
+          </div>
+
         </main>
         
         <footer class="page-footer">
@@ -62,6 +85,6 @@
         <input type="file" id="loadFile" style="display: none;">
         
         <script type="text/javascript" src="js/jstat-1.9.5.min.js"></script>
-        <script type="text/javascript" src="js/anova.min.js"></script>
+        <script type="text/javascript" src="js/anova.js" defer></script>
     </body>
 </html>

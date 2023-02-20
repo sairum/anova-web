@@ -39,7 +39,6 @@ input[type=radio] {
 .ct {
   display: inline-block;
   vertical-align: top;
-  border: 1px solid black;
   padding: 10px;
   margin: 10px 10px 10px 10px; }
 
@@ -81,3 +80,11 @@ thead, th {
   display: none;
   overflow: hidden;
   border: 2px solid black; }
+
+.right {
+  float: right;
+  margin: 0px 5px 0px 5px; }
+
+.ctcomp {
+  text-decoration: bold;
+  color: red; }
