@@ -24,17 +24,34 @@
     }
     table += '<th>DATA</th></tr></thead><tbody>';
 
-    // Now insert as much data points rows as needed
+    let lcodes = '';
+
+    // Go along all ANOVA cells in 'data'
 
     for( let i = 0, len = data.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, nf = factors.length; j < nf; j++ ) {
-        table += '<td>' + data[i].levels[j] + '</td>';
+
+      // Compute the level codes for each factor to be used by
+      // all data values belonging to an ANOVA cell
+
+      lcodes = '';
+
+      for(let j = 0, ll = data[i].levels.length; j < ll; j++ ) {
+        lcodes += '<td>' + data[i].levels[j] + '</td>';
       }
-      table += '<td>' + data[i].value.toString() + '</td></tr>';
+
+      // For each ANOVA cell display all of its data 'values' but
+      // prepend the factor levels before
+
+      for( let j = 0, cl = data[i].values.length; j < cl; j++ ) {
+        table += '<tr>' + lcodes;
+        table += '<td>' + data[i].values[j].toString() + '</td>';
+        table += '</tr>';
+      }
     }
     table += '</tbody></table>';
 
     tb.innerHTML = table;
+
   }
+
 

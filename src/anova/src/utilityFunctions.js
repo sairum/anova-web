@@ -114,17 +114,21 @@
     min_value = Number.MAX_SAFE_INTEGER;
 
     for( let i = 0; i < data.length; i++ ) {
-      data[i].value = data[i].original;
-      if ( data[i].value > max_value ) max_value = data[i].value;
-      if ( data[i].value < min_value ) min_value = data[i].value;
+      for( let j = 0; j < data[i].values.length; j++ ) {
+        data[i].values[j] = data[i].originals[j];
+        if ( data[i].values[j] > max_value ) max_value = data[i].values[j];
+        if ( data[i].values[j] < min_value ) min_value = data[i].values[j];
+      }
     }
+
+    console.log("Here")
 
     cleanVariables();
 
-    // Start the ANOVA by computing 'partials' and then
+    // Start the ANOVA by computing 'cells' or 'partials' and then
     // computing the 'terms' of the analysis
 
-    computePartials();
+    computeCells();
 
     displayData();
   }
@@ -149,7 +153,7 @@
     // children of <div id='anova'>
 
     let s = document.getElementsByClassName('tabcontent')
-    for( let i = 0, len = s.length; i < len; i++) {
+    for( let i = 0, len = s.length; i < len; i++ ) {
       if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = '';
     }
 
@@ -158,7 +162,6 @@
     nfactors = 0;
     factors  = [];
     data     = [];
-    partials = [];
     terms    = [];
     mcomps   = [];
     corrected_df = 0;
@@ -188,7 +191,6 @@
       factors[i].depth = 0;
     }
 
-    partials = [];
     terms    = [];
     mcomps   = [];
     corrected_df = 0;

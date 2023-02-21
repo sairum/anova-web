@@ -112,8 +112,8 @@
     // Compute the 'partials' list, i.e., a list with all terms potentially
     // included in an ANOVA.
 
-    if( getPartialSS() ) {
-        
+    if( getCellsSS() ) {
+
       // Sort 'terms' by ascending 'terms[].order'. Note that if the terms
       // 'order' is the same for two or more terms we resort to their 'idx'
       // attribute to keep the correct order. This is only important for
@@ -122,67 +122,67 @@
 
       terms.sort( function(a,b){return (a.order-b.order) || (a.idx - b.idx)} );
 
-      
+
       // Recompute MSs and dfs for all terms. Do not do this for the 'Error'
       // and the 'Total' because their SS and df are already computed.
-       
+
       for ( let i = 0, len = terms.length - 2; i < len; i++ ) {
         if( terms[i].order == 1 ) {
           terms[i].df = factors[i].nlevels - 1;
         } else {
           let m = 1;
           for ( let j = 0; j < nfactors; j++ ) {
-            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1; 
-          }  
+            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1;
+          }
           terms[i].df = m;
         }
         terms[i].MS = terms[i].SS/terms[i].df;
-      } 
-        
+      }
+
       // The df for the 'Error' is already computed so we don't overwrite it.
       // Instead we compute its MS
-      
+
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
 
-      //#DEBUG        
+      //#DEBUG
       displayTerms( "List of Terms" );
-      //!DEBUG      
+      //!DEBUG
 
       // Check if there are nested factors and correct the
       // ANOVA terms if necessary
-      
+
       correctForNesting();
-      
-      //#DEBUG   
+
+      //#DEBUG
       displayFactors();
-      //!DEBUG     
+      //!DEBUG
 
       // Compute Cornfield-Tukey rules to determine
       // denominators for the F-tests
-      
+
       computeCTRules();
-      
-      //#DEBUG 
+
+      //#DEBUG
       displayTerms( "List of Corrected Terms" );
-      //!DEBUG      
-      
+      //!DEBUG
+
       // Display tables of averages per factor or combinations of factors
-      
+
       displayAverages();
-      
+
       // Build the list of multiple comparisons, if any available
-      
+
       buildMultipleComparisons();
-      
+
       // Display the tab with multiple comparisons if any is selected
-      
+
       displayMultipleComparisons();
-        
+
       // Finally display the ANOVA table
-      
+
       displayANOVA();
-    }  
+    }
   }
 
   

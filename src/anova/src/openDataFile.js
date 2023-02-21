@@ -80,7 +80,7 @@
 
               nfactors = li.length - 1;
               
-              for( let j = 0, k = li.length - 1; j < k; j++ ) {
+              for( let j = 0; j < nfactors; j++ ) {
                 factors[j] = {};
                 let name = li[j];
                 
@@ -110,7 +110,6 @@
                 factors[j].subscript = String.fromCharCode( j + 105 );
               }   
               
-
               // The header was read. All subsequent lines will be
               // point observations (values) preceded by their
               // respective level codes per factor (each factor
@@ -122,6 +121,7 @@
               
             } else {
                 
+              // Reading data...
               // First check if this line has the same number of elements
               // of the header line. If not, abort, because something is
               // missing...
@@ -135,74 +135,133 @@
                       e.toString() + ')' );
                 return;
               }
-              
 
-              // Create a new object to hold the new observation
-              // corresponding to the line being parsed.
-              // This object will hold the classification criteria
-              // for each data observation, i.e. the level codes
-              // per each factor. Moreover, it will also hold the
-              // oserved data value into two separate variables:
-              // 'value' and 'original'. The latter will allow
-              // resetting the analysis to the original values
-              // after susbsequent transformation of the data,
-              // thus avoiding reading the data file again!
+              // Read factor level codes and data value. As explained above
+              // there should be as many level codes as factor per line, plus
+              // the data value in the end. Values will be grouped by unique
+              // level code combinations. An array of values will be created
+              // for each ANOVA cell, a cell being a unique combination
+              // between levels of factors. To do so, the structure gathering
+              // these observations should have a 'label' composed by the
+              // concatenation of level codes stored in an array named 'levels'.
+              // This way, it's always possible to assign any new observation
+              // (data value) to a group, even when data values are provided
+              // unordered.
 
-              let d = {};
-              d.levels = [];
+              let levels = [], value = 0, original = 0, label='';
+
               for( let j = 0; j < nfactors; j++ ) {
-                  
+
                 // Read factor level codes for this observation 'li[j]'
                 // and check if these level codes are already present
                 // in 'factors[].levels' array. If not, add them and
                 // increase 'factors[].nlevels' accordingly
-                
+
                 let p = factors[j].levels.indexOf( li[j] );
-                
+
                 // indexOf return -1 if the argument is not in the array
-                
+
                 if(p == -1 ) {
                   factors[j].levels.push( li[j] );
-                  factors[j].nlevels++;   
+                  factors[j].nlevels++;
                 }
-                
-                // Add this level to data's new observation 'd'
-                
-                d.levels.push( li[j] );
+
+                // Add this level to 'levels' array
+
+                levels.push( li[j] );
+
               }
-              
-              // Read the data value. It should be the last column
-              // of the line, which is equivalent 'li[nfactors]'
-              // because array indexes start on 0!
-              
-              let n = +li[nfactors].replace( ",", "." );
+
+              // Replace commas (',') by dots ('.') as decimal separators
+              let n = li[nfactors].replace( ",", "." );
               let a = Number.parseFloat(n);
+
+              //Check if the data value is a number
               if(Number.isNaN(a)) {
                 let ln = i + 1;
                 alert( 'In line ' + ln.toString() + ' data value (' +
                       n.toString() + ') is not a valid number!');
                 return;
-              } else {  
-                d.value    = n;
-                d.original = n;
-                
+              } else {
+                value    = a;
+                original = a;
+
                 // The following limits are important to determine
                 // what types of transformation are applicable to
                 // the data: e.g. arcsin() transformation should
                 // only be applied to data ranging from 0 to 1!
-                
-                if ( n > max_value ) max_value = n;
-                if ( n < min_value ) min_value = n;
-              }
-              
-              // Insert new observation in array 'data'
 
-              data.push( d );
-            }  
+                if ( a > max_value ) max_value = a;
+                if ( a < min_value ) min_value = a;
+              }
+
+              // Since all level codes and the data value are read,
+              // compute the 'label' for this observation.
+
+              label = levels.join('');
+
+              if ( data.length == 0 ) {
+
+                // If this is the first data value, the 'data' array
+                // is empty, so create a structure for a new ANOVA cell
+
+                data.push({ label    : label,
+                            levels   : levels,
+                            values   : [value],
+                            originals: [original],
+                            codes    : [],
+                            sumx     : 0,
+                            sumx2    : 0,
+                            ss       : 0,
+                            n        : 0,
+                            n_orig   : 0,
+                            average  : 0,
+                            variance : 0,
+                            median   : 0,
+                            cl95     : 0
+                          });
+
+              } else {
+
+                // Check if an ANOVA cell with the current computed
+                // 'label' already exists
+
+                let idx = data.findIndex( e => e.label === label);
+
+                if ( idx != -1 ) {
+
+                  // An ANOVA cell with 'label' == label was found!
+                  // Update its 'values' and 'originals'
+
+                  data[idx].values.push(value);
+                  data[idx].originals.push(original);
+                } else {
+
+                  // Add a new structure for the new ANOVA cell
+
+                  data.push( { label    : label,
+                               levels   : levels,
+                               values   : [value],
+                               originals: [original],
+                               codes    : [],
+                               sumx     : 0,
+                               sumx2    : 0,
+                               ss       : 0,
+                               n        : 0,
+                               n_orig   : 0,
+                               average  : 0,
+                               variance : 0,
+                               median   : 0,
+                               cl95     : 0
+                             });
+                }
+              }
+            }
           }  
         }
-        
-        // Enable all anova tabs as a file was successfully read
+
+        // If we reach this part, enable all ANOVA tabs as a file was
+        // successfully read
         
         let elem = document.getElementsByClassName("tabcontent");
         for ( let i = 0, len = elem.length; i < len; i++ ) {
@@ -217,7 +276,7 @@
         
         // Start the ANOVA by computing 'partials'
         
-        computePartials();
+        computeCells();
 
         // Select ANOVA tab to display results for this data
 

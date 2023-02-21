@@ -46,9 +46,9 @@
             table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
           }  
         }
-        table += '<td>' + terms[i].average[j].toString() + '</td>';
+        table += '<td>' + terms[i].average[j].toFixed(DPL) + '</td>';
         let n = parseInt(terms[i].n[j]);
-        table += '<td>' + n.toString() + '</td>';
+        table += '<td>' + n.toFixed(DPL) + '</td>';
         
         let std = 0, variance = 0;
         if( n > 1 ) {
@@ -57,8 +57,8 @@
           std = Math.sqrt(variance,2);
         }
         
-        table += '<td>' + std.toString() + '</td>';
-        table += '<td>' + variance.toString() + '</td>';
+        table += '<td>' + std.toFixed(DPL) + '</td>';
+        table += '<td>' + variance.toFixed(DPL) + '</td>';
         table += '</tr>'; 
       } 
       table += '</tbody></table>';

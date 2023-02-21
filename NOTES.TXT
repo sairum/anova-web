@@ -10,7 +10,7 @@ openDataFile()
   |     |
   |     |-- displayDataTable()
   |
-  |-- computePartials()
+  |-- computeCells()
         |
         |-- # displayPartials() #
         |
@@ -21,7 +21,7 @@ openDataFile()
               |-- # displayTerms() #
               |
               |
-              |-- IF -- getPartialSS()
+              |-- IF -- getCellsSS()
                    |
                    |-- displayTerms()
                    |

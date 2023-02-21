@@ -1,18 +1,20 @@
   /****************************************************************************/
   /*                                                                          */
-  /*                              displayPartials                             */
+  /*                              displayCells                                */
   /*                                                                          */
-  /* This function displays a table with the list of 'partials'. Each partial */
-  /* represents a unique combination between levels of every factor present,  */
-  /* and contains the accummulated sums of all observations ('sumx'), and     */
-  /* sums of all squared observations ('sumx2)                                */
+  /* This function displays a table with the list of ANOVA 'cell' also called */
+  /* 'partials'. Each cell represents a unique combination between levels of  */
+  /* all factors involved in the analysis, and contains the accummulated sums */
+  /* of all observations ('sumx'), and sums of all squared observations       */
+  /* ('sumx2'), together with other important quantities, such as 'average',  */
+  /* 'median', 'variance' and number of replicates ('n')                      */
   /*                                                                          */
   /****************************************************************************/
   
   //#DEBUG
-  function displayPartials() {
+  function displayCells() {
 
-    console.log('displayPartials() called');
+    console.log('displayCells() called');
 
     let d = document.getElementById('debug'); 
     
@@ -26,18 +28,18 @@
     table += '<th>n orig.</th><th>n</th><th>sumx</th>' +
              '<th>sumx2</th><th>ss</th></thead><tbody>';
     
-    for(let i = 0, len = partials.length; i < len; i++ ) {
+    for(let i = 0, len = data.length; i < len; i++ ) {
       table += '<tr>';
-      for(let j = 0, l = partials[i].codes.length; j < l; j++ ) {
-        let c = partials[i].codes[j];
+      for(let j = 0, l = data[i].codes.length; j < l; j++ ) {
+        let c = data[i].codes[j];
         let name = factors[j].levels[c];
         table += '<td>' + name + '</td>';
       }
-      table += '<td>' + partials[i].n_orig.toString() + '</td>';
-      table += '<td>' + partials[i].n.toString() + '</td>';
-      table += '<td>' + partials[i].sumx.toString() + '</td>';
-      table += '<td>' + partials[i].sumx2.toString() + '</td>';
-      table += '<td>' + partials[i].ss.toString() + '</td>';
+      table += '<td>' + data[i].n_orig.toString() + '</td>';
+      table += '<td>' + data[i].n.toString() + '</td>';
+      table += '<td>' + data[i].sumx.toString() + '</td>';
+      table += '<td>' + data[i].sumx2.toString() + '</td>';
+      table += '<td>' + data[i].ss.toString() + '</td>';
       table += '</tr>';
     }
 

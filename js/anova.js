@@ -8,6 +8,7 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
+  const DPL  = 4; // Number of decimal places
 
   // Define these two constants which denote factor types. The choice of 0
   // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
@@ -24,13 +25,87 @@ var anova = (function () {
   
   const FIXED   = 1;
   
-  // 'data' is an array holding data values as read from data file
+  // The array 'data' holds data values read from the data file. However
+  // a data file is 'organized' according to a specific format, described
+  // below. The file is read line by line. All information relative to
+  // a given datum should be on a single line! The format is as follows:
   //
-  // value    : the observed value (may be transformed)
-  // original : the original value (to reset if transformed)
-  // levels   : an array with codes denoting the level for each 
+  // 1) All lines started with a '#' are ignored (comment lines)
+  //
+  // 2) The first non-comment line is treated as a header with names of
+  // factors separated by one or more spaces/tabs followed by the name
+  // of the column with data values. Data values should always be on the
+  // last column! Names of factors should not contain spaces! They should
+  // be formed by a 'single' word or a few compound words joined by an
+  // underscore '_' (e.g., 'fenced_squares') or hyphen '-' (e.g, 'sq-10').
+  // Random factors should be denoted by adding an '*' at the end of the
+  // name. Ideally, factor names should not contain any non ASCII characters.
+  // All characters within the sets a-z, A-Z, 0-9, plus '_', '+', and '-'
+  // are allowed (but not spaces). An example for a three factor data set
+  // would be
+  //
+  // A B C* DATA
+  //
+  // The remaining non-comment lines should have as many label names as
+  // there are factors, plus the numeric value for the data variable.
+  // Numeric values can use the dot or the comma as decimal separator.
+  // For a three factor example the line
+  //
+  // a 2 k 23,6
+  //
+  // means, level 'a' of factor 'A', level '2' of factor 'B' and level 'k'
+  // of factor C, with DATA value equal to 23.6 (note comma replaced by dot)
+  //
+  // the 'data' array is a structured array. It will contain the set of
+  // all data values for each unique combination of factor levels in the
+  // same record. For example, consider an example with two factors each
+  // with two levels: Factor A, levels {1,2} and factor B, levels {a,b},
+  // and 6 replicates per cell (a cell being any possible combination
+  // of levels of all factors involved). The 'data' array in JSON format
+  // would be:
+  //
+  // [{values   : [23,12,11,12,14,12],
+  //   originals: [23,12,11,12,14,12],
+  //   levels   : ['1','a']
+  //   label    : '1a', ...},
+  //  {values   : [15,13,10,12,14,10],
+  //   originals: [15,13,10,12,14,10],
+  //   levels   : ['2','b']
+  //   label    : '2a', ...},
+  // [{values   : [18,16,14,15,16,15],
+  //   originals: [18,16,14,15,16,15],
+  //   levels   : ['1','b']
+  //   label    : '1b', ...},
+  //  {values   : [17,19,16,18,18,16],
+  //   originals: [17,19,16,18,18,16],
+  //   levels   : ['2','b']
+  //   label    : '2b', ...}];
+  //
+  // values   : array of observed values (may be transformed)
+  //            for a given combination of levels of factors
+  //            as identified by 'levels' or 'label'
+  // originals: the original values (to allow one to reset them
+  //            if transformations have been applied)
+  // levels   : an array with codes denoting the levels for each
   //            factor; it's size is 'nfactors'; original level
   //            names are kept in 'factors[].levels' array
+  // label    : a string concatenation of level codes to allow
+  //
+  // codes    : array with level codes per factor; codes are
+  //            just indexes to the true level names stored
+  //            in 'factors[].levels'
+  // sumx     : sum of observations which have this
+  //            combination of level codes
+  // sumx2    : squared sum of observations which have this
+  //            combination of level codes
+  // ss       : partial sums of squares
+  // n        : number of replicates
+  // n_orig   : original replicates; may be different from 'n'
+  //            if some replicates are missing in some cells
+  // average  : average of values for this cell
+  // variance : variance for this cell
+  // median   : median for this cell
+  // cl95     : unsigned 95 confidence limit
    
   var data = [];
   
@@ -60,22 +135,6 @@ var anova = (function () {
   //               factors has 'depth' 2.
 
   var factors = []; 
-  
-  // 'partials' is an array holding all unique combinations
-  // between the levels of the codes involved in the ANOVA
-  //
-  // codes  : array with level codes per factor; codes are 
-  //          just indexes to the true level names stored
-  //          in 'factors[].levels'
-  // sumx   : sum of observations which have this
-  //          combination of level codes
-  // sumx2  : squared sum of observations which have this
-  //          combination of level codes
-  // n      : number of replicates
-  // n_orig : original replicates; may be different from 'n' 
-  //          if some replicates are missing in some cells
-  
-  var partials = [];
   
   // 'terms' is an array that holds information for all combinations of 
   // ANOVA terms as if a full orthogonal model was used. For each term 
@@ -500,8 +559,8 @@ var anova = (function () {
     // Compute the 'partials' list, i.e., a list with all terms potentially
     // included in an ANOVA.
 
-    if( getPartialSS() ) {
-        
+    if( getCellsSS() ) {
+
       // Sort 'terms' by ascending 'terms[].order'. Note that if the terms
       // 'order' is the same for two or more terms we resort to their 'idx'
       // attribute to keep the correct order. This is only important for
@@ -510,58 +569,58 @@ var anova = (function () {
 
       terms.sort( function(a,b){return (a.order-b.order) || (a.idx - b.idx)} );
 
-      
+
       // Recompute MSs and dfs for all terms. Do not do this for the 'Error'
       // and the 'Total' because their SS and df are already computed.
-       
+
       for ( let i = 0, len = terms.length - 2; i < len; i++ ) {
         if( terms[i].order == 1 ) {
           terms[i].df = factors[i].nlevels - 1;
         } else {
           let m = 1;
           for ( let j = 0; j < nfactors; j++ ) {
-            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1; 
-          }  
+            if ( terms[i].codes[j] > 0 ) m *= factors[j].nlevels - 1;
+          }
           terms[i].df = m;
         }
         terms[i].MS = terms[i].SS/terms[i].df;
-      } 
-        
+      }
+
       // The df for the 'Error' is already computed so we don't overwrite it.
       // Instead we compute its MS
-      
+
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
 
 
       // Check if there are nested factors and correct the
       // ANOVA terms if necessary
-      
+
       correctForNesting();
-      
+
 
       // Compute Cornfield-Tukey rules to determine
       // denominators for the F-tests
-      
+
       computeCTRules();
-      
-      
+
+
       // Display tables of averages per factor or combinations of factors
-      
+
       displayAverages();
-      
+
       // Build the list of multiple comparisons, if any available
-      
+
       buildMultipleComparisons();
-      
+
       // Display the tab with multiple comparisons if any is selected
-      
+
       displayMultipleComparisons();
-        
+
       // Finally display the ANOVA table
-      
+
       displayANOVA();
-    }  
+    }
   }
 
   
@@ -718,166 +777,157 @@ var anova = (function () {
   
   /****************************************************************************/
   /*                                                                          */
-  /*                              computePartials                             */
+  /*                              computeCells                                */
   /*                                                                          */
-  /*    For each data point (observation) read its corresponding value and    */
-  /*    factor levels and recode the latter into integers, replacing the      */
-  /*    original label by its corresponding index in 'factors[i].levels'      */
-  /*    array. The first factor level for any factor will be always 0 (zero), */
-  /*    the second will be 1, and so on. Take the following example of the    */
-  /*    first data points of a three factor analysis (two replicates per      */
-  /*    combination of factors)                                               */
+  /*  Data were gathered into structures corresponding to NOVA cells also     */
+  /*  known as 'partials'. Each element of array 'data' holds an array with   */
+  /*  the factor level codes ('levels'), another with data values ('values')  */
+  /*  and a copy of the latter just to be able to revert any modifications    */
+  /*  to the data ('originals'). Besides these variables, we compute several  */
+  /*  quantities that are fundamental for the next computations.              */
   /*                                                                          */
-  /*  Site Type  Light DATA                                                   */
-  /*  A    B     day   23                                                     */
-  /*  A    B     day   21                                                     */
-  /*  A    B     night 12                                                     */
-  /*  A    B     night 16                                                     */
-  /*  A    C     day   13                                                     */
-  /*  A    C     day   11                                                     */
-  /* ...                                                                      */
+  /*  'levels' are recoded into integers, replacing the original label by its */
+  /*  corresponding index in 'factors[i].levels' array. The first factor      */
+  /*  level for any factor will always be 0 (zero), the second will be 1, and */
+  /*  so on. Take the following example of the first data points of a three   */
+  /*  factor analysis (two replicates per combination of factors)             */
   /*                                                                          */
-  /* The data array will be coded as                                          */
-  /*                                                                          */
-  /*  [0, 0, 0] 23                                                            */
-  /*  [0, 0, 0] 21                                                            */
-  /*  [0, 0, 1] 12                                                            */
-  /*  [0, 0, 1] 16                                                            */
-  /*  [0, 1, 0] 13                                                            */
-  /*  [0, 1, 0] 11                                                            */
-  /* ...                                                                      */
-  /*                                                                          */
-  /*   For factor 'Site' level 'A' of 'Site' is coded as 0 (no more levels    */
-  /*   in the example). For factor 'Type', level 'B' is coded as 0 and level  */
-  /*   'C' is coded as 1. For factor 'Light', level 'day' is coded as 0 and   */
-  /*   level 'night' is coded as 1                                            */
-  /*                                                                          */
-  /*   During this stage a list of 'partials' is built. A 'partial' is a      */
-  /*   unique combination of level codes. All data observations that have a   */
-  /*   similar combination of codes are accummulated into two quantities for  */
-  /*   their corresponding partial: 'sumx' for the sum of observations, and   */
-  /*   'sumx2', for the sum of squared observations, and 'n' for the number   */
-  /*   observations of the partial. For the example above, the corresponding  */
-  /*   list of partials would be                                              */
-  /*                                                                          */
-  /*   {[0, 0, 0], 44, 970, 2},                                               */
-  /*   {[0, 0, 1], 28, 400, 2},                                               */
-  /*   {[0, 1, 0], 24, 290, 2},                                               */
+  /*    Site Type  Light DATA                                                 */
+  /*    A    B     day   23                                                   */
+  /*    A    B     day   21                                                   */
+  /*    A    B     night 12                                                   */
+  /*    A    B     night 16                                                   */
+  /*    A    C     day   13                                                   */
+  /*    A    C     day   11                                                   */
   /*   ...                                                                    */
+  /*                                                                          */
+  /*  The 'codes' and 'values' in the 'data' array will be                    */
+  /*                                                                          */
+  /*   data[i]   'codes'  'values'                                            */
+  /*     0      [0, 0, 0] [23, 21]                                            */
+  /*     1      [0, 0, 1] [12, 16]                                            */
+  /*     2      [0, 1, 0] [13, 11]                                            */
+  /*   ...                                                                    */
+  /*                                                                          */
+  /*  For factor 'Site' level 'A' of 'Site' is coded as 0 (no more levels in  */
+  /*  the example). For factor 'Type', level 'B' is coded as 0 and level 'C'  */
+  /*  is coded as 1. For factor 'Light', level 'day' is coded as 0 and level  */
+  /*  'night' is coded as 1.                                                  */
+  /*                                                                          */
+  /*  During this stage we accummulate the sums of all values and the sums of */
+  /*  all squared values into two 'sumx' and 'sumx2', respectively, together  */
+  /*  with the total number of replicates ('n'). For the example above, the   */
+  /*  corresponding 'data' entries would be                                   */
+  /*                                                                          */
+  /*  [                                                                       */
+  /*   {[0, 0, 0], [23, 21], 44, 970, 2},                                     */
+  /*   {[0, 0, 1], [12, 16], 28, 400, 2},                                     */
+  /*   {[0, 1, 0], [13, 11], 24, 290, 2},                                     */
+  /*   ...                                                                    */
+  /*  ]                                                                       */
   /*                                                                          */
   /****************************************************************************/
   
-  function computePartials() {
+  // This is a implementation of a function to compute medians of lists.
+  // Medians are necessary to implement the version of Levene's test with
+  // medians, instead of means.
+
+  function median( l ) {
+    if (l.length == 0) return;
+    l.sort((a, b) => a - b);
+    let mid = Math.floor( l.length / 2 );
+    // If odd length, take midpoint, else take average of midpoints
+    let median = l.length % 2 === 1 ? l[mid] : ( l[mid - 1] + l[mid] ) / 2;
+    return median;
+  }
+
+  function computeCells() {
 
 
-    // To determine if an observation with a particular combination of factor
-    // level codes belongs to an already created partial, we have to compare
-    // two arrays: the codes of the partials against the codes of the data
-    // observation. This is easier to do with strings than iterating through
-    // the two arrays. Hence, an associative array (hash) with the codes of
-    // the 'partials' as keys and the key of the partial in the 'partials'
-    // list as a value is built.
-    
-    let partials_hash = [];
-    
-    // Use 'maxn' to estimate the maximum number of replicates per partial.
-    // In a balanced data set, all 'partials' will have the same number of
+    // Use 'maxn' to estimate the maximum number of replicates per cell.
+    // In a balanced data set, all 'cells' will have the same number of
     // replicates. This variable will allow us to replace missing data in
     // a given partial by adding as many averages as necessary to complete
     // 'maxn' replicates
     
     let maxn = 0;
-    
-    // Now, go along all data aobservations (points) and accummulate the
-    // values in their respective 'partials' or create new 'partials' as
-    // needed
 
-    for(let i = 0, ds = data.length; i < ds; i++ ) {
+    // We will use this a lot
+
+    let dl = data.length;
+
+    // Now, go along all ANOVA cells and for each compute some important
+    // quantities:
+    // 1) n (number of replicates)
+    // 2) sumx (sum of all data values)
+    // 3) sum2x (sum of squared data values)
+
+    for(let i = 0; i < dl; i++ ) {
         
       // Translate the original data level code into the numeric
       // level code stored previously in 'factors[].levels'
       
-      let codes = [];
-      
       for(let j = 0, len = data[i].levels.length; j < len; j++ ) {
         let l = data[i].levels[j];
         let k = factors[j].levels.indexOf(l);
-        codes[j] = k;
+        data[i].codes[j] = k;
       }  
       
-      // Build the object to store this specific 'partial's information
-      
-      let p = {};
-      
-      p.codes  = codes;
-      p.sumx   = data[i].value;
-      p.sumx2  = Math.pow(data[i].value,2);
-      p.n      = 1;
-      p.n_orig = 1;
-      
-      // If list of 'partials' is empty add a new term
-      
-      if( partials.length == 0 ) {
-          
-        // Method 'push' returns the new array length so use this
-        // information and subtract 1 to store the index of the
-        // newly created partial in the hash array value!
-        
-        partials_hash[codes] = partials.push(p) - 1;
-        
-      } else {
-          
-        // Search if this particular combination of levels is already
-        // in 'partials'
-        
-        let v = partials_hash.hasOwnProperty(codes)?partials_hash[codes]:-1;
-        if( v != -1 ) {
-            
-          // A partial with these codes is already in the list. Accummulate
-          // values ('sumx', 'sumx2') and increase replicates ('n')
-          
-          partials[v].sumx+= p.sumx;
-          partials[v].sumx2+= p.sumx2;
-          partials[v].n++;
+      // Compute 'n', 'sumx' and 'sumx2'
 
+      data[i].sumx  = 0;
+      data[i].sumx2 = 0;
 
-          // Update the maximum number of replicates per combination of
-          // factors (ANOVA cells), if the 'n' for this 'partial' is greater
-          // than 'maxn'.
-          
-          if( partials[v].n > maxn ) maxn = partials[v].n;
-          
-        } else {
-            
-          // A partial with these codes is not yet in the list of partials, so
-          // create a new one. See above why -1 is used (partials.length == 0)
-          
-          partials_hash[codes] = partials.push(p) - 1;
-          
-        }  
+      data[i].n = data[i].values.length;
+
+      for(let j = 0; j < data[i].n; j++ ) {
+        data[i].sumx  += data[i].values[j];
+        data[i].sumx2 += Math.pow( data[i].values[j], 2 );
       }
+
+      // Save 'n_orig' for this cell. So far lets assume it is
+      // equal to the number of observations on 'values' array
+
+      data[i].n_orig = data[i].n;
+
+      // Update the maximum number of replicates per ANOVA cell
+      // if the 'n' for this 'data' cell is greater than 'maxn'.
+
+      if( data[i].n > maxn ) maxn = data[i].n;
+
+      // Compute the average of values
+
+      data[i].average = data[i].sumx/data[i].n;
+
+      // Compute the variance of values
+
+      data[i].variance = data[i].sumx2 - Math.pow(data[i].sumx,2)/data[i].n;
+      data[i].variance = data[i].variance/(data[i].n-1);
+
+      // Sort data values to compute the median
+
+      data[i].median = median( data[i].values );
+
     }
     
-    // Go along all partials and verify that each has a similar number of
-    // replicates ('partials[i].n' should equal 'maxn'). If not, replace
-    // missing values with the average of the partial
-    // (partials[i].sumx/partials[i].n) and increment 'correted_df' to later
-    // decrease the degrees of freedom of the 'Error' (or 'Residual') and
-    // the 'Total' terms of the ANOVA
+    // Go along all cells and verify that each has a similar number of
+    // replicates ('data[i].n' should equal 'maxn'). If not, replace
+    // missing values with the average of the cell (data[i].average)
+    // and increment the global variable 'correted_df' to later
+    // decrease the degrees of freedom of the 'Error' (or 'Residual')
+    // and the 'Total' terms of the ANOVA
     
-    for(let i = 0, tl = partials.length; i < tl; i++ ) {
-      partials[i].n_orig = partials[i].n;
-      if( partials[i].n < maxn ) {
-        let average = partials[i].sumx/partials[i].n;
-        let n = maxn - partials[i].n;
-        for( let j = 0; j < n; j++) {
+    for(let i = 0; i < dl; i++ ) {
+      if( data[i].n < maxn ) {
+        let diff = maxn - data[i].n;
+        for( let j = 0; j < diff; j++) {
           corrected_df++;
-          partials[i].sumx += average;
-          partials[i].sumx2 += Math.pow(average,2);
-          partials[i].n++;
-        }  
-      }  
-    } 
+          data[i].sumx += data[i].average;
+          data[i].sumx2 += Math.pow( data[i].average, 2 );
+          data[i].n++;
+        }
+      }
+    }
     
     // After rebalancing the data, compute Residual and Total sums of squares
     // and their respective degrees of freedom. Compute also the squared
@@ -890,28 +940,28 @@ var anova = (function () {
     // the set
 
     let tsumx = 0, tsumx2 = 0, tn = 0;
-    
-    for(let i = 0, tl = partials.length; i < tl; i++ ) {
-      partials[i].ss =
-        partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n;
-      residual.df += partials[i].n-1;
-      residual.ss += partials[i].ss;
-      total.df += partials[i].n;
-      tsumx += partials[i].sumx;
-      tsumx2 += partials[i].sumx2;
-      tn += partials[i].n;
+
+    for(let i = 0; i < dl; i++ ) {
+      data[i].ss =
+        data[i].sumx2 - Math.pow( data[i].sumx, 2 )/data[i].n;
+      residual.df += data[i].n-1;
+      residual.ss += data[i].ss;
+      total.df += data[i].n;
+      tsumx += data[i].sumx;
+      tsumx2 += data[i].sumx2;
+      tn += data[i].n;
     }
     total.df -= 1;
-    total.ss = tsumx2 - Math.pow(tsumx,2)/tn;
+    total.ss = tsumx2 - Math.pow( tsumx, 2 )/tn;
     residual.orig_df = residual.df;
     residual.df -= corrected_df;
     total.orig_df = total.df;
     total.df -= corrected_df;
      
-    // The number of replicates can now be taken from any partial
+    // The number of replicates can now be taken from any ANOVA cell
     // because rebalancing was performed earlier
     
-    replicates = partials[0].n;
+    replicates = data[0].n;
     
     
     // It's time to compute homogeneity tests for this data set
@@ -1227,19 +1277,19 @@ var anova = (function () {
     for(let i = 0, len = terms.length; i < len; i++ ) {
       text += '<tr>';
       text += '<td>' + terms[i].name + '</td>';
-      text += '<td>' + terms[i].SS.toFixed(5).toString() + '</td>';
+      text += '<td>' + terms[i].SS.toFixed(DPL).toString() + '</td>';
       text += '<td>' + terms[i].df.toString() + '</td>';
       if( terms[i].name != 'Total' ) {
-        text += '<td>' + terms[i].MS.toFixed(5).toString() + '</td>';
+        text += '<td>' + terms[i].MS.toFixed(DPL).toString() + '</td>';
       } else {
         text += '<td></td>';
       }
       let nm = terms[i].against;
       if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td>' + terms[i].F.toFixed(5).toString() +'</td>';
+        text += '<td>' + terms[i].F.toFixed(DPL).toString() +'</td>';
         let prob = '';
-        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(5).toString();
-        else prob = '<b><i>' + terms[i].P.toFixed(5).toString() + '</i></b>';
+        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(DPL).toString();
+        else prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
         text += '<td>' + prob + '</td>';
         text += '<td>' + terms[nm].name + '</td>';
       } else {
@@ -1308,9 +1358,9 @@ var anova = (function () {
             table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
           }  
         }
-        table += '<td>' + terms[i].average[j].toString() + '</td>';
+        table += '<td>' + terms[i].average[j].toFixed(DPL) + '</td>';
         let n = parseInt(terms[i].n[j]);
-        table += '<td>' + n.toString() + '</td>';
+        table += '<td>' + n.toFixed(DPL) + '</td>';
         
         let std = 0, variance = 0;
         if( n > 1 ) {
@@ -1319,8 +1369,8 @@ var anova = (function () {
           std = Math.sqrt(variance,2);
         }
         
-        table += '<td>' + std.toString() + '</td>';
-        table += '<td>' + variance.toString() + '</td>';
+        table += '<td>' + std.toFixed(DPL) + '</td>';
+        table += '<td>' + variance.toFixed(DPL) + '</td>';
         table += '</tr>'; 
       } 
       table += '</tbody></table>';
@@ -1445,6 +1495,20 @@ var anova = (function () {
   } 
   /****************************************************************************/
   /*                                                                          */
+  /*                              displayCells                                */
+  /*                                                                          */
+  /* This function displays a table with the list of ANOVA 'cell' also called */
+  /* 'partials'. Each cell represents a unique combination between levels of  */
+  /* all factors involved in the analysis, and contains the accummulated sums */
+  /* of all observations ('sumx'), and sums of all squared observations       */
+  /* ('sumx2'), together with other important quantities, such as 'average',  */
+  /* 'median', 'variance' and number of replicates ('n')                      */
+  /*                                                                          */
+  /****************************************************************************/
+  
+
+  /****************************************************************************/
+  /*                                                                          */
   /*                                 displayData                              */
   /*                                                                          */
   /*          This function displays all data in a form of a table            */
@@ -1518,19 +1582,36 @@ var anova = (function () {
     }
     table += '<th>DATA</th></tr></thead><tbody>';
 
-    // Now insert as much data points rows as needed
+    let lcodes = '';
+
+    // Go along all ANOVA cells in 'data'
 
     for( let i = 0, len = data.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, nf = factors.length; j < nf; j++ ) {
-        table += '<td>' + data[i].levels[j] + '</td>';
+
+      // Compute the level codes for each factor to be used by
+      // all data values belonging to an ANOVA cell
+
+      lcodes = '';
+
+      for(let j = 0, ll = data[i].levels.length; j < ll; j++ ) {
+        lcodes += '<td>' + data[i].levels[j] + '</td>';
       }
-      table += '<td>' + data[i].value.toString() + '</td></tr>';
+
+      // For each ANOVA cell display all of its data 'values' but
+      // prepend the factor levels before
+
+      for( let j = 0, cl = data[i].values.length; j < cl; j++ ) {
+        table += '<tr>' + lcodes;
+        table += '<td>' + data[i].values[j].toString() + '</td>';
+        table += '</tr>';
+      }
     }
     table += '</tbody></table>';
 
     tb.innerHTML = table;
+
   }
+
 
   /****************************************************************************/
   /*                                                                          */
@@ -1577,18 +1658,6 @@ var anova = (function () {
     
     d.innerHTML = text;
   }
-  /****************************************************************************/
-  /*                                                                          */
-  /*                              displayPartials                             */
-  /*                                                                          */
-  /* This function displays a table with the list of 'partials'. Each partial */
-  /* represents a unique combination between levels of every factor present,  */
-  /* and contains the accummulated sums of all observations ('sumx'), and     */
-  /* sums of all squared observations ('sumx2)                                */
-  /*                                                                          */
-  /****************************************************************************/
-  
-
 
   /*******************************************************************************/
   /*                                                                             */
@@ -1602,7 +1671,7 @@ var anova = (function () {
   
   /****************************************************************************/
   /*                                                                          */
-  /*                              getPartialSS                                */
+  /*                               getCellsSS                                 */
   /*                                                                          */
   /*   This function computes uncorrected sums of squares (ss) and then       */
   /*   transform these into corrected sums of squares (SS). The algorithm is  */
@@ -1610,12 +1679,12 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
  
-  function getPartialSS() {  
+  function getCellsSS() {
 
     
     // We will use these two lengths a lot, so cache them
     
-    let tl = terms.length, pl = partials.length;
+    let tl = terms.length, dl = data.length;
     
     // Now, go along all terms...
     
@@ -1646,21 +1715,21 @@ var anova = (function () {
       
       // For each term 'i' accummulate 'sumx', 'sumx2' and 'n' of for all
       // different levels (or combinations of levels) of factors included
-      // in it. This is done by extracting from each 'partial' the
+      // in it. This is done by extracting from each 'cell' the
       // information about the different level codes filtered by a variable
       // 't' which excludes all factors not included in the current term 'i'.
       //
-      // Go along all 'partials'...
+      // Go along all 'cells'...
       
-      for( let j = 0; j < pl; j++ ) {
+      for( let j = 0; j < dl; j++ ) {
         
-        // Read 'partials[].codes' but exclude information for factors
+        // Read 'cells[].codes' but exclude information for factors
         // not in term 'i'
         
         let t = [];
         
         for( let k = 0; k < nfactors; k++ ) {
-          if( c[k] === 1 ) t.push( partials[j].codes[k] );
+          if( c[k] === 1 ) t.push( data[j].codes[k] );
           else t.push( '-' );
         } 
         
@@ -1675,18 +1744,18 @@ var anova = (function () {
           // 'terms[i].levels' array. Accumulate 'sumx', 'sumx2',
           // and 'n' on the respective slot of the array ('idx')
           
-          terms[i].sumx[idx] += partials[j].sumx;
-          terms[i].sumx2[idx] += partials[j].sumx2;
-          terms[i].n[idx] += partials[j].n;
+          terms[i].sumx[idx] += data[j].sumx;
+          terms[i].sumx2[idx] += data[j].sumx2;
+          terms[i].n[idx] += data[j].n;
           
         } else { 
           
           // Else create a new combination of levels
           
           terms[i].levels.push(t.toString());
-          terms[i].sumx.push(partials[j].sumx);
-          terms[i].sumx2.push(partials[j].sumx2);
-          terms[i].n.push(partials[j].n);
+          terms[i].sumx.push(data[j].sumx);
+          terms[i].sumx2.push(data[j].sumx2);
+          terms[i].n.push(data[j].n);
           terms[i].nlevels++;
         }
       }
@@ -1728,10 +1797,10 @@ var anova = (function () {
         terms[i].ss += v;
       }
       
-      // Now recompute corrected partial sums of squares (SS) for all terms
-      // by subtracting from the error term all partial 'ss' of terms
+      // Now recompute corrected cells' sums of squares (SS) for all terms
+      // by subtracting from the error term all cells' 'ss' of terms
       // (factors and interactions) involved in a given term. For example,
-      // consider the following three factor ANOVA list of partials, with
+      // consider the following three factor ANOVA list of cells, with
       // factors A, B, and C (note that the last column in codes corresponds
       // to the "Error" term which is not a factor)
       //
@@ -1856,7 +1925,7 @@ var anova = (function () {
     //
     //           (N-k)*ln(s_p²) - Sum[(n_i-1)*ln(s_i²)]
     // X² =     ---------------------------------------
-    //          1 + 1/(3*(k-1))*Sum[1/(n_i-1) - 1/(N-k)]
+    //          1 + 1/(3*(k-1))*(Sum[1/(n_i-1)] - 1/(N-k))
     //
     // N    = Sum[n_i]
     // s_p² = Sum[(n_i-1)*s_i²]/(N-k)
@@ -1877,40 +1946,39 @@ var anova = (function () {
     // A = (N-k)*ln(s_p²)
     // B = Sum[(n_i-1)*ln(s_i²)]
     // C = 1/(3*(k-1))
-    // D = Sum[1/(n_i-1) - 1/(N-k)]
+    // D = Sum[1/(n_i-1)] - 1/(N-k)
     //
 
     // k denotes the total number of averages involved in the test,
     // determind by all possible combinations between factor levels
     
-    let k = partials.length;
+    let k = data.length;
     
     // Compute N, the sum of all sample sizes. Since the present anova-web
-    // only works with balanced  data sets, summing all n_i's is equivalent
-    // to multyplying the number of replicates by the number of partials
+    // only works with balanced data sets, summing all n_i's is equivalent
+    // to multyplying the number of replicates by the number of 'cells' (k)
     
-    let N = 0;
-    for( let i = 0; i < partials.length; i++ ) N += partials[i].n;
+    let N = k * replicates;
     
-    // Compute the pooled variance s_p² (pvar)
-    
-    let pvar = 0, v;
-    for( let i = 0; i < partials.length; i++ ) {
-      v = (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n);
-      v = v/(N-k);
-      pvar += v;
+    // Compute the pooled variance s_p² (pvar) Sum[(n_i-1)*s_i²]/(N-k)
+
+    let pvar = 0;
+    for( let i = 0; i < k; i++ ) {
+      pvar += (data[i].n - 1 )*data[i].variance;
     }
-    
+    pvar = pvar/(N-k);
+
+
+    // Compute A = (N-k)*ln(s_p²)
+
     let A = (N-k)*Math.log(pvar);
 
     // Compute B = Sum[(n_i-1)*ln(s_i²)]
 
-    let B = 0, si2;
-    for( let i = 0; i < partials.length; i++ ) {
-      // Compute s_i² for this ANOVA cell
-      si2 =  (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n);
-      si2 = si2/(partials[i].n-1);
-      B += (partials[i].n-1)*Math.log(si2);
+    let B = 0;
+    for( let i = 0; i < k; i++ ) {
+      //  data[i].variance contain s_i² for this ANOVA cell
+      B += ( data[i].n - 1 )*Math.log( data[i].variance );
     }    
     
     // Compute C = 1/(3*(k-1))
@@ -1920,9 +1988,10 @@ var anova = (function () {
     // Compute D = Sum[1/(n_i-1) - 1/(N-k)]
 
     let D = 0;
-    for( let i = 0; i < partials.length; i++ ) {
-      D += (1/(partials[i].n-1) - 1/(N-k));
+    for( let i = 0; i < k; i++ ) {
+      D += 1/(data[i].n-1);
     }
+    D -= 1/(N-k);
     
     // Compute Bartlett's K value
     
@@ -1963,7 +2032,7 @@ var anova = (function () {
     // k denotes the total number of averages involved in the test,
     // determind by all possible combinations between factor levels
     
-    let k = partials.length;
+    let k = data.length;
     
     // The corresponding degrees of freedom for each average (which should be
     // equal for balanced analysis) are computed from 'replicates' - 1
@@ -1974,10 +2043,8 @@ var anova = (function () {
     // by the sum of all variances. This is the Cochran's test
     
     for( let i = 0; i < k; i++ ) {
-      let v = partials[i].sumx2 - Math.pow(partials[i].sumx, 2)/partials[i].n;
-      v = v/( partials[i].n - 1 );
-      if ( v > maxvar ) maxvar = v;
-      sumvar += v;       
+      if ( data[i].variance > maxvar ) maxvar = data[i].variance;
+      sumvar += data[i].variance;
     }
     
     let cochran_C = maxvar/sumvar;
@@ -2057,60 +2124,60 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
-  // This is a implementation of a function to compute medians of lists.
-  // It may be useful to implement the version of Levene's test with medians,
-  // instead of averages.
-  //
-  // function median( l ) {
-  //   if (l.length == 0) return;
-  //   l.sort((a, b) => a - b);
-  //   let mid = Math.floor( l.length / 2 );
-  //   // If odd length, take midpoint, else take average of midpoints
-  //   let median = l.length % 2 === 1 ? l[mid] : ( l[mid - 1] + l[mid] ) / 2;
-  //   return median;
-  // }
 
-//   function testLevene() {
-//
-//     // The Levene's W test is
-//     //
-//     //      (N-k)   Sum[ N_i*(Z_i. - Z_..)² ]
-//     // W =  ----- * -------------------------
-//     //      (k-1)   Sum[ Sum(Z_ij - Z_i.)² ]
-//     //
-//     // k    = number of means being compared
-//     // N    = Sum[N_i]
-//     // N_i  = size for mean i (sample sizes must be similar: balanced analysis)
-//     // Z_i. = mean of group i
-//     // Z_.. = mean of means
-//     // Z_ij = individual values
-//     //
-//     // These quantities are already computed from the information on the
-//     // 'partials' array, which has the sum of Z_ij's and the sum of squared
-//     // Z_ij's per combinaton of levels of factors, plus the averages Z_i.
-//     // for each combination.
-//
-//     // k denotes the total number of averages involved in the test,
-//     // determind by all possible combinations between factor levels
-//
-//     let k = partials.length;
-//
-//     // Compute N (total number of observations)
-//     let N = 0, W = 0;
-//     for ( let i = 0; i < k; i++ ) N += partials[i].n;
-//
-//     W = (N-k)/(k-1);
-//
-//     // Compute the numerator Sum[ N_i*(Z_i. - Z_..)² ]
-//     // Z_i. are the group means
-//     // Z_.. is the grand mean
-//     // To alculate the above mentioned quantity it's
-//     // better to calculate the sum of all means and the
-//     // sum of all squared means. The formula
-//     //
-//     // Sum Z_i² - (Sum )²/N is equivalent to
-//     //
-//     // Sum[ N_i*(Z_i. - Z_..)² ]
+  function testLevene() {
+
+    // The Levene's W test is
+    //
+    //      (N-k)   Sum[ N_i*(Z_i. - Z_..)² ]
+    // W =  ----- * -------------------------
+    //      (k-1)   Sum[ Sum(Z_ij - Z_i.)² ]
+    //
+    // k    = number of means being compared
+    // N    = Sum[N_i]
+    // N_i  = size for mean i (sample sizes must be similar: balanced analysis)
+    // Z_i. = mean of group i
+    // Z_.. = average of Z_ij
+    // Z_ij = | Y_ij - Y_i. |
+    //
+    // Y_ij = individual observation
+    // Y_i. = median of cell or group i
+    //
+    // These quantities are already computed from the information on the
+    // 'cells' array, which has the sum of Z_ij's and the sum of squared
+    // Z_ij's per combinaton of levels of factors, plus the averages Z_i.
+    // for each combination.
+
+    // k denotes the total number of averages involved in the test,
+    // determind by all possible combinations between factor levels
+
+    let k = data.length;
+
+    // Compute N (total number of observations)
+    let N = 0, W = 0;
+    for ( let i = 0; i < k; i++ ) N += data[i].n;
+
+    W = (N-k)/(k-1);
+
+    // Compute Z_ij = Sum( |Z_ij - Median_i| )
+
+    let Zij = 0, Z = 0;
+    for( let i = 0; i < k; i++ ) {
+      for( let j = 0; j < data[i].values.length; j++ ) {
+        Zij += Math.abs( data[i].values[j] - data[i].median );
+      }
+    }
+
+    // Compute the numerator Sum[ N_i*(Z_i. - Z_..)² ]
+    // Z_i. are the group means
+    // Z_.. is the grand mean
+    // To alculate the above mentioned quantity it's
+    // better to calculate the sum of all means and the
+    // sum of all squared means. The formula
+    //
+    // Sum Z_i² - (Sum )²/N is equivalent to
+    //
+    // Sum[ N_i*(Z_i. - Z_..)² ]
 //
 //     let A = 0, a1;
 //     for( let i = 0; i < k; i++ ) {
@@ -2135,20 +2202,20 @@ var anova = (function () {
 //     // The corresponding degrees of freedom for each average (which should be
 //     // equal for balanced analysis) are computed from 'replicates' - 1
 //
-//     let df = replicates - 1;
-//
-//     let prob = 0.0, levene_w = 0.0;
-//
-//     let result = '';
-//     result += '<p>Levene\'s Test for <b><i>k</i> = ' +
-//               k.toString() + '</b> averages and <b>&nu; = ';
-//     result += df.toString() + '</b> degrees of freedom: <b>' +
-//               levene_w.toString() + '</b></p>';
-//     result += '<p>P = <b>' + prob.toString() + '</b></p>';
-//
-//     return result;
-//
-//   }
+    let df = replicates - 1;
+
+    let prob = 0.0, levene_w = 0.0;
+
+    let result = '';
+    result += '<p>Levene\'s Test for <b><i>k</i> = ' +
+              k.toString() + '</b> averages and <b>&nu; = ';
+    result += df.toString() + '</b> degrees of freedom: <b>' +
+              levene_w.toString() + '</b></p>';
+    result += '<p>P = <b>' + prob.toString() + '</b></p>';
+
+    return result;
+
+  }
 
 
   function studentizedComparisons(test, fact, df, ms, avgs) {
@@ -2414,7 +2481,7 @@ var anova = (function () {
 
               nfactors = li.length - 1;
               
-              for( let j = 0, k = li.length - 1; j < k; j++ ) {
+              for( let j = 0; j < nfactors; j++ ) {
                 factors[j] = {};
                 let name = li[j];
                 
@@ -2444,7 +2511,6 @@ var anova = (function () {
                 factors[j].subscript = String.fromCharCode( j + 105 );
               }   
               
-
               // The header was read. All subsequent lines will be
               // point observations (values) preceded by their
               // respective level codes per factor (each factor
@@ -2456,6 +2522,7 @@ var anova = (function () {
               
             } else {
                 
+              // Reading data...
               // First check if this line has the same number of elements
               // of the header line. If not, abort, because something is
               // missing...
@@ -2469,74 +2536,133 @@ var anova = (function () {
                       e.toString() + ')' );
                 return;
               }
-              
 
-              // Create a new object to hold the new observation
-              // corresponding to the line being parsed.
-              // This object will hold the classification criteria
-              // for each data observation, i.e. the level codes
-              // per each factor. Moreover, it will also hold the
-              // oserved data value into two separate variables:
-              // 'value' and 'original'. The latter will allow
-              // resetting the analysis to the original values
-              // after susbsequent transformation of the data,
-              // thus avoiding reading the data file again!
+              // Read factor level codes and data value. As explained above
+              // there should be as many level codes as factor per line, plus
+              // the data value in the end. Values will be grouped by unique
+              // level code combinations. An array of values will be created
+              // for each ANOVA cell, a cell being a unique combination
+              // between levels of factors. To do so, the structure gathering
+              // these observations should have a 'label' composed by the
+              // concatenation of level codes stored in an array named 'levels'.
+              // This way, it's always possible to assign any new observation
+              // (data value) to a group, even when data values are provided
+              // unordered.
 
-              let d = {};
-              d.levels = [];
+              let levels = [], value = 0, original = 0, label='';
+
               for( let j = 0; j < nfactors; j++ ) {
-                  
+
                 // Read factor level codes for this observation 'li[j]'
                 // and check if these level codes are already present
                 // in 'factors[].levels' array. If not, add them and
                 // increase 'factors[].nlevels' accordingly
-                
+
                 let p = factors[j].levels.indexOf( li[j] );
-                
+
                 // indexOf return -1 if the argument is not in the array
-                
+
                 if(p == -1 ) {
                   factors[j].levels.push( li[j] );
-                  factors[j].nlevels++;   
+                  factors[j].nlevels++;
                 }
-                
-                // Add this level to data's new observation 'd'
-                
-                d.levels.push( li[j] );
+
+                // Add this level to 'levels' array
+
+                levels.push( li[j] );
+
               }
-              
-              // Read the data value. It should be the last column
-              // of the line, which is equivalent 'li[nfactors]'
-              // because array indexes start on 0!
-              
-              let n = +li[nfactors].replace( ",", "." );
+
+              // Replace commas (',') by dots ('.') as decimal separators
+              let n = li[nfactors].replace( ",", "." );
               let a = Number.parseFloat(n);
+
+              //Check if the data value is a number
               if(Number.isNaN(a)) {
                 let ln = i + 1;
                 alert( 'In line ' + ln.toString() + ' data value (' +
                       n.toString() + ') is not a valid number!');
                 return;
-              } else {  
-                d.value    = n;
-                d.original = n;
-                
+              } else {
+                value    = a;
+                original = a;
+
                 // The following limits are important to determine
                 // what types of transformation are applicable to
                 // the data: e.g. arcsin() transformation should
                 // only be applied to data ranging from 0 to 1!
-                
-                if ( n > max_value ) max_value = n;
-                if ( n < min_value ) min_value = n;
-              }
-              
-              // Insert new observation in array 'data'
 
-              data.push( d );
-            }  
+                if ( a > max_value ) max_value = a;
+                if ( a < min_value ) min_value = a;
+              }
+
+              // Since all level codes and the data value are read,
+              // compute the 'label' for this observation.
+
+              label = levels.join('');
+
+              if ( data.length == 0 ) {
+
+                // If this is the first data value, the 'data' array
+                // is empty, so create a structure for a new ANOVA cell
+
+                data.push({ label    : label,
+                            levels   : levels,
+                            values   : [value],
+                            originals: [original],
+                            codes    : [],
+                            sumx     : 0,
+                            sumx2    : 0,
+                            ss       : 0,
+                            n        : 0,
+                            n_orig   : 0,
+                            average  : 0,
+                            variance : 0,
+                            median   : 0,
+                            cl95     : 0
+                          });
+
+              } else {
+
+                // Check if an ANOVA cell with the current computed
+                // 'label' already exists
+
+                let idx = data.findIndex( e => e.label === label);
+
+                if ( idx != -1 ) {
+
+                  // An ANOVA cell with 'label' == label was found!
+                  // Update its 'values' and 'originals'
+
+                  data[idx].values.push(value);
+                  data[idx].originals.push(original);
+                } else {
+
+                  // Add a new structure for the new ANOVA cell
+
+                  data.push( { label    : label,
+                               levels   : levels,
+                               values   : [value],
+                               originals: [original],
+                               codes    : [],
+                               sumx     : 0,
+                               sumx2    : 0,
+                               ss       : 0,
+                               n        : 0,
+                               n_orig   : 0,
+                               average  : 0,
+                               variance : 0,
+                               median   : 0,
+                               cl95     : 0
+                             });
+                }
+              }
+            }
           }  
         }
-        
-        // Enable all anova tabs as a file was successfully read
+
+        // If we reach this part, enable all ANOVA tabs as a file was
+        // successfully read
         
         let elem = document.getElementsByClassName("tabcontent");
         for ( let i = 0, len = elem.length; i < len; i++ ) {
@@ -2548,7 +2674,7 @@ var anova = (function () {
         
         // Start the ANOVA by computing 'partials'
         
-        computePartials();
+        computeCells();
 
         // Select ANOVA tab to display results for this data
 
@@ -2605,6 +2731,7 @@ var anova = (function () {
     let multc = parseFloat(document.getElementById("multc").value);
     let divc  = parseFloat(document.getElementById("divc").value);
     let powc  = parseFloat(document.getElementById("powc").value);
+
     //console.log(multc,divc,powc);
     max_value = Number.MIN_SAFE_INTEGER;
     min_value = Number.MAX_SAFE_INTEGER;
@@ -2613,54 +2740,91 @@ var anova = (function () {
         resetData();
         break;
       case 1:
-        if( min_value >= 0 ) data.forEach( e => e.value = Math.sqrt( e.value ) );
-        else alert("Cannot apply transformation to negative values!");
+        if( min_value >= 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] = Math.sqrt( data[i].values[j] );
+            }
+          }
+        } else alert('Cannot apply transformation to negative values!');
         break;
       case 2:
-        if( min_value >= 0 ) data.forEach( e => e.value = Math.pow( e.value, 1/3 ) );
-        else alert("Cannot apply transformation to negative values!");
+        if( min_value >= 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] = Math.pow( data[i].values[j], 1/3 );
+            }
+          }
+        } else alert('Cannot apply transformation to negative values!');
         break;
       case 3:
-        if( min_value >= 0 ) data.forEach( e => e.value = Math.pow( e.value, 1/4 ) );
-        else alert("Cannot apply transformation to negative values!");
+        if( min_value >= 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] = Math.pow( data[i].values[j], 1/4 );
+            }
+          }
+        } else alert('Cannot apply transformation to negative values!');
         break;
       case 4:
-        if( min_value > 0 ) data.forEach( e => e.value = Math.log( e.value + 1 )/Math.log(10) );
-        else alert("Cannot apply transformation to negative or null values!");
+        if( min_value > 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j]  = Math.log( data[i].values[j] + 1 );
+              data[i].values[j] /= Math.log(10);
+            }
+          }
+        } else alert('Cannot apply transformation to negative' +
+                     'or null values!');
         break;
       case 5:
-        if( min_value > 0 ) data.forEach( e => e.value = Math.log( e.value + 1 ) );
-        else alert("Cannot apply transformation to negative or null values!");
+        if( min_value > 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] = Math.log( data[i].values[j] + 1 );
+            }
+          }
+        } else alert('Cannot apply transformation to' +
+                     ' negative or null values!');
         break;
       case 6:
-        if( (min_value >= 0) && ( max_value <= 1 ) ) data.forEach( e => e.value = Math.asin( e.value ) );
-        else alert("Cannot apply transformation to values larger than 1 or smaller than 0!");
+        if( (min_value >= 0) && ( max_value <= 1 ) ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] = Math.asin( data[i].values[j] );
+            }
+          }
+        } else alert('Cannot apply transformation to values larger than 1' +
+                     ' or smaller than 0!');
         break;
       case 7:
-        data.forEach( e => e.value *= multc );
+        for( let i = 0; i < data.length; i++ ) {
+          for( let j = 0; j < data[i].values.length; j++ ) {
+            data[i].values[j] *= multc;
+          }
+        }
         break;
       case 8:
-        if( divc != 0 ) data.forEach( e => e.value /= divc );
-        else alert("Cannot divide by zero!");
+        if( divc != 0 ) {
+          for( let i = 0; i < data.length; i++ ) {
+            for( let j = 0; j < data[i].values.length; j++ ) {
+              data[i].values[j] /= divc;
+            }
+          }
+        } else alert('Cannot divide by zero!');
         break;
       case 9:
         data.forEach( e => Math.pow( e.value, powc ) );
         break;
     }
 
-    //   console.log(data)
-
-    /*
-     * Reset data structures
-     */
+    // Reset data structures
 
     cleanVariables();
 
-    /*
-     * Restart the ANOVA by computing 'partials'
-     */
+    // Restart the ANOVA by computing 'cells' or 'partials'
 
-    computePartials();
+    computeCells();
 
     displayDataTable();
 
@@ -2781,17 +2945,21 @@ var anova = (function () {
     min_value = Number.MAX_SAFE_INTEGER;
 
     for( let i = 0; i < data.length; i++ ) {
-      data[i].value = data[i].original;
-      if ( data[i].value > max_value ) max_value = data[i].value;
-      if ( data[i].value < min_value ) min_value = data[i].value;
+      for( let j = 0; j < data[i].values.length; j++ ) {
+        data[i].values[j] = data[i].originals[j];
+        if ( data[i].values[j] > max_value ) max_value = data[i].values[j];
+        if ( data[i].values[j] < min_value ) min_value = data[i].values[j];
+      }
     }
+
+    console.log("Here")
 
     cleanVariables();
 
-    // Start the ANOVA by computing 'partials' and then
+    // Start the ANOVA by computing 'cells' or 'partials' and then
     // computing the 'terms' of the analysis
 
-    computePartials();
+    computeCells();
 
     displayData();
   }
@@ -2813,7 +2981,7 @@ var anova = (function () {
     // children of <div id='anova'>
 
     let s = document.getElementsByClassName('tabcontent')
-    for( let i = 0, len = s.length; i < len; i++) {
+    for( let i = 0, len = s.length; i < len; i++ ) {
       if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = '';
     }
 
@@ -2822,7 +2990,6 @@ var anova = (function () {
     nfactors = 0;
     factors  = [];
     data     = [];
-    partials = [];
     terms    = [];
     mcomps   = [];
     corrected_df = 0;
@@ -2852,7 +3019,6 @@ var anova = (function () {
       factors[i].depth = 0;
     }
 
-    partials = [];
     terms    = [];
     mcomps   = [];
     corrected_df = 0;

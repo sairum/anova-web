@@ -37,7 +37,7 @@
     //
     //           (N-k)*ln(s_p²) - Sum[(n_i-1)*ln(s_i²)]
     // X² =     ---------------------------------------
-    //          1 + 1/(3*(k-1))*Sum[1/(n_i-1) - 1/(N-k)]
+    //          1 + 1/(3*(k-1))*(Sum[1/(n_i-1)] - 1/(N-k))
     //
     // N    = Sum[n_i]
     // s_p² = Sum[(n_i-1)*s_i²]/(N-k)
@@ -58,40 +58,39 @@
     // A = (N-k)*ln(s_p²)
     // B = Sum[(n_i-1)*ln(s_i²)]
     // C = 1/(3*(k-1))
-    // D = Sum[1/(n_i-1) - 1/(N-k)]
+    // D = Sum[1/(n_i-1)] - 1/(N-k)
     //
 
     // k denotes the total number of averages involved in the test,
     // determind by all possible combinations between factor levels
     
-    let k = partials.length;
+    let k = data.length;
     
     // Compute N, the sum of all sample sizes. Since the present anova-web
-    // only works with balanced  data sets, summing all n_i's is equivalent
-    // to multyplying the number of replicates by the number of partials
+    // only works with balanced data sets, summing all n_i's is equivalent
+    // to multyplying the number of replicates by the number of 'cells' (k)
     
-    let N = 0;
-    for( let i = 0; i < partials.length; i++ ) N += partials[i].n;
+    let N = k * replicates;
     
-    // Compute the pooled variance s_p² (pvar)
-    
-    let pvar = 0, v;
-    for( let i = 0; i < partials.length; i++ ) {
-      v = (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n);
-      v = v/(N-k);
-      pvar += v;
+    // Compute the pooled variance s_p² (pvar) Sum[(n_i-1)*s_i²]/(N-k)
+
+    let pvar = 0;
+    for( let i = 0; i < k; i++ ) {
+      pvar += (data[i].n - 1 )*data[i].variance;
     }
-    
+    pvar = pvar/(N-k);
+
+
+    // Compute A = (N-k)*ln(s_p²)
+
     let A = (N-k)*Math.log(pvar);
 
     // Compute B = Sum[(n_i-1)*ln(s_i²)]
 
-    let B = 0, si2;
-    for( let i = 0; i < partials.length; i++ ) {
-      // Compute s_i² for this ANOVA cell
-      si2 =  (partials[i].sumx2 - Math.pow(partials[i].sumx,2)/partials[i].n);
-      si2 = si2/(partials[i].n-1);
-      B += (partials[i].n-1)*Math.log(si2);
+    let B = 0;
+    for( let i = 0; i < k; i++ ) {
+      //  data[i].variance contain s_i² for this ANOVA cell
+      B += ( data[i].n - 1 )*Math.log( data[i].variance );
     }    
     
     // Compute C = 1/(3*(k-1))
@@ -101,9 +100,10 @@
     // Compute D = Sum[1/(n_i-1) - 1/(N-k)]
 
     let D = 0;
-    for( let i = 0; i < partials.length; i++ ) {
-      D += (1/(partials[i].n-1) - 1/(N-k));
+    for( let i = 0; i < k; i++ ) {
+      D += 1/(data[i].n-1);
     }
+    D -= 1/(N-k);
     
     // Compute Bartlett's K value
     
@@ -144,7 +144,7 @@
     // k denotes the total number of averages involved in the test,
     // determind by all possible combinations between factor levels
     
-    let k = partials.length;
+    let k = data.length;
     
     // The corresponding degrees of freedom for each average (which should be
     // equal for balanced analysis) are computed from 'replicates' - 1
@@ -155,10 +155,8 @@
     // by the sum of all variances. This is the Cochran's test
     
     for( let i = 0; i < k; i++ ) {
-      let v = partials[i].sumx2 - Math.pow(partials[i].sumx, 2)/partials[i].n;
-      v = v/( partials[i].n - 1 );
-      if ( v > maxvar ) maxvar = v;
-      sumvar += v;       
+      if ( data[i].variance > maxvar ) maxvar = data[i].variance;
+      sumvar += data[i].variance;
     }
     
     let cochran_C = maxvar/sumvar;
@@ -238,60 +236,60 @@
   /*                                                                          */
   /****************************************************************************/
 
-  // This is a implementation of a function to compute medians of lists.
-  // It may be useful to implement the version of Levene's test with medians,
-  // instead of averages.
-  //
-  // function median( l ) {
-  //   if (l.length == 0) return;
-  //   l.sort((a, b) => a - b);
-  //   let mid = Math.floor( l.length / 2 );
-  //   // If odd length, take midpoint, else take average of midpoints
-  //   let median = l.length % 2 === 1 ? l[mid] : ( l[mid - 1] + l[mid] ) / 2;
-  //   return median;
-  // }
 
-//   function testLevene() {
-//
-//     // The Levene's W test is
-//     //
-//     //      (N-k)   Sum[ N_i*(Z_i. - Z_..)² ]
-//     // W =  ----- * -------------------------
-//     //      (k-1)   Sum[ Sum(Z_ij - Z_i.)² ]
-//     //
-//     // k    = number of means being compared
-//     // N    = Sum[N_i]
-//     // N_i  = size for mean i (sample sizes must be similar: balanced analysis)
-//     // Z_i. = mean of group i
-//     // Z_.. = mean of means
-//     // Z_ij = individual values
-//     //
-//     // These quantities are already computed from the information on the
-//     // 'partials' array, which has the sum of Z_ij's and the sum of squared
-//     // Z_ij's per combinaton of levels of factors, plus the averages Z_i.
-//     // for each combination.
-//
-//     // k denotes the total number of averages involved in the test,
-//     // determind by all possible combinations between factor levels
-//
-//     let k = partials.length;
-//
-//     // Compute N (total number of observations)
-//     let N = 0, W = 0;
-//     for ( let i = 0; i < k; i++ ) N += partials[i].n;
-//
-//     W = (N-k)/(k-1);
-//
-//     // Compute the numerator Sum[ N_i*(Z_i. - Z_..)² ]
-//     // Z_i. are the group means
-//     // Z_.. is the grand mean
-//     // To alculate the above mentioned quantity it's
-//     // better to calculate the sum of all means and the
-//     // sum of all squared means. The formula
-//     //
-//     // Sum Z_i² - (Sum )²/N is equivalent to
-//     //
-//     // Sum[ N_i*(Z_i. - Z_..)² ]
+  function testLevene() {
+
+    // The Levene's W test is
+    //
+    //      (N-k)   Sum[ N_i*(Z_i. - Z_..)² ]
+    // W =  ----- * -------------------------
+    //      (k-1)   Sum[ Sum(Z_ij - Z_i.)² ]
+    //
+    // k    = number of means being compared
+    // N    = Sum[N_i]
+    // N_i  = size for mean i (sample sizes must be similar: balanced analysis)
+    // Z_i. = mean of group i
+    // Z_.. = average of Z_ij
+    // Z_ij = | Y_ij - Y_i. |
+    //
+    // Y_ij = individual observation
+    // Y_i. = median of cell or group i
+    //
+    // These quantities are already computed from the information on the
+    // 'cells' array, which has the sum of Z_ij's and the sum of squared
+    // Z_ij's per combinaton of levels of factors, plus the averages Z_i.
+    // for each combination.
+
+    // k denotes the total number of averages involved in the test,
+    // determind by all possible combinations between factor levels
+
+    let k = data.length;
+
+    // Compute N (total number of observations)
+    let N = 0, W = 0;
+    for ( let i = 0; i < k; i++ ) N += data[i].n;
+
+    W = (N-k)/(k-1);
+
+    // Compute Z_ij = Sum( |Z_ij - Median_i| )
+
+    let Zij = 0, Z = 0;
+    for( let i = 0; i < k; i++ ) {
+      for( let j = 0; j < data[i].values.length; j++ ) {
+        Zij += Math.abs( data[i].values[j] - data[i].median );
+      }
+    }
+
+    // Compute the numerator Sum[ N_i*(Z_i. - Z_..)² ]
+    // Z_i. are the group means
+    // Z_.. is the grand mean
+    // To alculate the above mentioned quantity it's
+    // better to calculate the sum of all means and the
+    // sum of all squared means. The formula
+    //
+    // Sum Z_i² - (Sum )²/N is equivalent to
+    //
+    // Sum[ N_i*(Z_i. - Z_..)² ]
 //
 //     let A = 0, a1;
 //     for( let i = 0; i < k; i++ ) {
@@ -316,18 +314,18 @@
 //     // The corresponding degrees of freedom for each average (which should be
 //     // equal for balanced analysis) are computed from 'replicates' - 1
 //
-//     let df = replicates - 1;
-//
-//     let prob = 0.0, levene_w = 0.0;
-//
-//     let result = '';
-//     result += '<p>Levene\'s Test for <b><i>k</i> = ' +
-//               k.toString() + '</b> averages and <b>&nu; = ';
-//     result += df.toString() + '</b> degrees of freedom: <b>' +
-//               levene_w.toString() + '</b></p>';
-//     result += '<p>P = <b>' + prob.toString() + '</b></p>';
-//
-//     return result;
-//
-//   }
+    let df = replicates - 1;
+
+    let prob = 0.0, levene_w = 0.0;
+
+    let result = '';
+    result += '<p>Levene\'s Test for <b><i>k</i> = ' +
+              k.toString() + '</b> averages and <b>&nu; = ';
+    result += df.toString() + '</b> degrees of freedom: <b>' +
+              levene_w.toString() + '</b></p>';
+    result += '<p>P = <b>' + prob.toString() + '</b></p>';
+
+    return result;
+
+  }
 

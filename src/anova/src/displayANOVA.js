@@ -20,19 +20,19 @@
     for(let i = 0, len = terms.length; i < len; i++ ) {
       text += '<tr>';
       text += '<td>' + terms[i].name + '</td>';
-      text += '<td>' + terms[i].SS.toFixed(5).toString() + '</td>';
+      text += '<td>' + terms[i].SS.toFixed(DPL).toString() + '</td>';
       text += '<td>' + terms[i].df.toString() + '</td>';
       if( terms[i].name != 'Total' ) {
-        text += '<td>' + terms[i].MS.toFixed(5).toString() + '</td>';
+        text += '<td>' + terms[i].MS.toFixed(DPL).toString() + '</td>';
       } else {
         text += '<td></td>';
       }
       let nm = terms[i].against;
       if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td>' + terms[i].F.toFixed(5).toString() +'</td>';
+        text += '<td>' + terms[i].F.toFixed(DPL).toString() +'</td>';
         let prob = '';
-        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(5).toString();
-        else prob = '<b><i>' + terms[i].P.toFixed(5).toString() + '</i></b>';
+        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(DPL).toString();
+        else prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
         text += '<td>' + prob + '</td>';
         text += '<td>' + terms[nm].name + '</td>';
       } else {

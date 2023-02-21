@@ -1,7 +1,7 @@
   
   /****************************************************************************/
   /*                                                                          */
-  /*                              getPartialSS                                */
+  /*                               getCellsSS                                 */
   /*                                                                          */
   /*   This function computes uncorrected sums of squares (ss) and then       */
   /*   transform these into corrected sums of squares (SS). The algorithm is  */
@@ -9,15 +9,15 @@
   /*                                                                          */
   /****************************************************************************/
  
-  function getPartialSS() {  
+  function getCellsSS() {
 
     //#DEBUG
-    console.log('getPartialSS() called');
+    console.log('getCellsSS() called');
     //!DEBUG
     
     // We will use these two lengths a lot, so cache them
     
-    let tl = terms.length, pl = partials.length;
+    let tl = terms.length, dl = data.length;
     
     // Now, go along all terms...
     
@@ -48,21 +48,21 @@
       
       // For each term 'i' accummulate 'sumx', 'sumx2' and 'n' of for all
       // different levels (or combinations of levels) of factors included
-      // in it. This is done by extracting from each 'partial' the
+      // in it. This is done by extracting from each 'cell' the
       // information about the different level codes filtered by a variable
       // 't' which excludes all factors not included in the current term 'i'.
       //
-      // Go along all 'partials'...
+      // Go along all 'cells'...
       
-      for( let j = 0; j < pl; j++ ) {
+      for( let j = 0; j < dl; j++ ) {
         
-        // Read 'partials[].codes' but exclude information for factors
+        // Read 'cells[].codes' but exclude information for factors
         // not in term 'i'
         
         let t = [];
         
         for( let k = 0; k < nfactors; k++ ) {
-          if( c[k] === 1 ) t.push( partials[j].codes[k] );
+          if( c[k] === 1 ) t.push( data[j].codes[k] );
           else t.push( '-' );
         } 
         
@@ -77,18 +77,18 @@
           // 'terms[i].levels' array. Accumulate 'sumx', 'sumx2',
           // and 'n' on the respective slot of the array ('idx')
           
-          terms[i].sumx[idx] += partials[j].sumx;
-          terms[i].sumx2[idx] += partials[j].sumx2;
-          terms[i].n[idx] += partials[j].n;
+          terms[i].sumx[idx] += data[j].sumx;
+          terms[i].sumx2[idx] += data[j].sumx2;
+          terms[i].n[idx] += data[j].n;
           
         } else { 
           
           // Else create a new combination of levels
           
           terms[i].levels.push(t.toString());
-          terms[i].sumx.push(partials[j].sumx);
-          terms[i].sumx2.push(partials[j].sumx2);
-          terms[i].n.push(partials[j].n);
+          terms[i].sumx.push(data[j].sumx);
+          terms[i].sumx2.push(data[j].sumx2);
+          terms[i].n.push(data[j].n);
           terms[i].nlevels++;
         }
       }
@@ -130,10 +130,10 @@
         terms[i].ss += v;
       }
       
-      // Now recompute corrected partial sums of squares (SS) for all terms
-      // by subtracting from the error term all partial 'ss' of terms
+      // Now recompute corrected cells' sums of squares (SS) for all terms
+      // by subtracting from the error term all cells' 'ss' of terms
       // (factors and interactions) involved in a given term. For example,
-      // consider the following three factor ANOVA list of partials, with
+      // consider the following three factor ANOVA list of cells, with
       // factors A, B, and C (note that the last column in codes corresponds
       // to the "Error" term which is not a factor)
       //

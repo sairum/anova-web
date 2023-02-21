@@ -8,6 +8,7 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
+  const DPL  = 4; // Number of decimal places
 
   // Define these two constants which denote factor types. The choice of 0
   // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
@@ -24,13 +25,87 @@ var anova = (function () {
   
   const FIXED   = 1;
   
-  // 'data' is an array holding data values as read from data file
+  // The array 'data' holds data values read from the data file. However
+  // a data file is 'organized' according to a specific format, described
+  // below. The file is read line by line. All information relative to
+  // a given datum should be on a single line! The format is as follows:
   //
-  // value    : the observed value (may be transformed)
-  // original : the original value (to reset if transformed)
-  // levels   : an array with codes denoting the level for each 
+  // 1) All lines started with a '#' are ignored (comment lines)
+  //
+  // 2) The first non-comment line is treated as a header with names of
+  // factors separated by one or more spaces/tabs followed by the name
+  // of the column with data values. Data values should always be on the
+  // last column! Names of factors should not contain spaces! They should
+  // be formed by a 'single' word or a few compound words joined by an
+  // underscore '_' (e.g., 'fenced_squares') or hyphen '-' (e.g, 'sq-10').
+  // Random factors should be denoted by adding an '*' at the end of the
+  // name. Ideally, factor names should not contain any non ASCII characters.
+  // All characters within the sets a-z, A-Z, 0-9, plus '_', '+', and '-'
+  // are allowed (but not spaces). An example for a three factor data set
+  // would be
+  //
+  // A B C* DATA
+  //
+  // The remaining non-comment lines should have as many label names as
+  // there are factors, plus the numeric value for the data variable.
+  // Numeric values can use the dot or the comma as decimal separator.
+  // For a three factor example the line
+  //
+  // a 2 k 23,6
+  //
+  // means, level 'a' of factor 'A', level '2' of factor 'B' and level 'k'
+  // of factor C, with DATA value equal to 23.6 (note comma replaced by dot)
+  //
+  // the 'data' array is a structured array. It will contain the set of
+  // all data values for each unique combination of factor levels in the
+  // same record. For example, consider an example with two factors each
+  // with two levels: Factor A, levels {1,2} and factor B, levels {a,b},
+  // and 6 replicates per cell (a cell being any possible combination
+  // of levels of all factors involved). The 'data' array in JSON format
+  // would be:
+  //
+  // [{values   : [23,12,11,12,14,12],
+  //   originals: [23,12,11,12,14,12],
+  //   levels   : ['1','a']
+  //   label    : '1a', ...},
+  //  {values   : [15,13,10,12,14,10],
+  //   originals: [15,13,10,12,14,10],
+  //   levels   : ['2','b']
+  //   label    : '2a', ...},
+  // [{values   : [18,16,14,15,16,15],
+  //   originals: [18,16,14,15,16,15],
+  //   levels   : ['1','b']
+  //   label    : '1b', ...},
+  //  {values   : [17,19,16,18,18,16],
+  //   originals: [17,19,16,18,18,16],
+  //   levels   : ['2','b']
+  //   label    : '2b', ...}];
+  //
+  // values   : array of observed values (may be transformed)
+  //            for a given combination of levels of factors
+  //            as identified by 'levels' or 'label'
+  // originals: the original values (to allow one to reset them
+  //            if transformations have been applied)
+  // levels   : an array with codes denoting the levels for each
   //            factor; it's size is 'nfactors'; original level
   //            names are kept in 'factors[].levels' array
+  // label    : a string concatenation of level codes to allow
+  //
+  // codes    : array with level codes per factor; codes are
+  //            just indexes to the true level names stored
+  //            in 'factors[].levels'
+  // sumx     : sum of observations which have this
+  //            combination of level codes
+  // sumx2    : squared sum of observations which have this
+  //            combination of level codes
+  // ss       : partial sums of squares
+  // n        : number of replicates
+  // n_orig   : original replicates; may be different from 'n'
+  //            if some replicates are missing in some cells
+  // average  : average of values for this cell
+  // variance : variance for this cell
+  // median   : median for this cell
+  // cl95     : unsigned 95 confidence limit
    
   var data = [];
   
@@ -60,22 +135,6 @@ var anova = (function () {
   //               factors has 'depth' 2.
 
   var factors = []; 
-  
-  // 'partials' is an array holding all unique combinations
-  // between the levels of the codes involved in the ANOVA
-  //
-  // codes  : array with level codes per factor; codes are 
-  //          just indexes to the true level names stored
-  //          in 'factors[].levels'
-  // sumx   : sum of observations which have this
-  //          combination of level codes
-  // sumx2  : squared sum of observations which have this
-  //          combination of level codes
-  // n      : number of replicates
-  // n_orig : original replicates; may be different from 'n' 
-  //          if some replicates are missing in some cells
-  
-  var partials = [];
   
   // 'terms' is an array that holds information for all combinations of 
   // ANOVA terms as if a full orthogonal model was used. For each term 
