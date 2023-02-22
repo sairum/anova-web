@@ -122,19 +122,6 @@
 
       if( data[i].n > maxn ) maxn = data[i].n;
 
-      // Compute the average of values
-
-      data[i].average = data[i].sumx/data[i].n;
-
-      // Compute the variance of values
-
-      data[i].variance = data[i].sumx2 - Math.pow(data[i].sumx,2)/data[i].n;
-      data[i].variance = data[i].variance/(data[i].n-1);
-
-      // Sort data values to compute the median
-
-      data[i].median = median( data[i].values );
-
     }
     
     // Go along all cells and verify that each has a similar number of
@@ -144,40 +131,57 @@
     // decrease the degrees of freedom of the 'Error' (or 'Residual')
     // and the 'Total' terms of the ANOVA
     
-    for(let i = 0; i < dl; i++ ) {
-      if( data[i].n < maxn ) {
-        let diff = maxn - data[i].n;
+    for ( let c of data ) {
+      if( c.n < maxn ) {
+        let diff = maxn - c.n;
         for( let j = 0; j < diff; j++) {
           corrected_df++;
-          data[i].sumx += data[i].average;
-          data[i].sumx2 += Math.pow( data[i].average, 2 );
-          data[i].n++;
+          c.sumx += c.average;
+          c.sumx2 += Math.pow( c.average, 2 );
+          c.n++;
         }
       }
+
+      // After rebalancing each unbalanced cell if needed compute its
+      // 'average', 'variance', and 'median'
+
+      // Compute the average of values
+
+      c.average = c.sumx/c.n;
+
+      // Compute the variance of values
+
+      c.variance = ( c.sumx2 - Math.pow( c.sumx, 2 )/c.n ) / ( c.n-1 );
+
+      // Sort data values to compute the median
+
+      c.median = median( c.values );
     }
+
+
     
-    // After rebalancing the data, compute Residual and Total sums of squares
-    // and their respective degrees of freedom. Compute also the squared
-    // differences between observations and their averages for each partial
-    // using the equation:
+    // Finally, compute Residual and Total sums of squares and their
+    // respective degrees of freedom. Compute also the squared differences
+    // between observations and their averages for each partial using the
+    // equation:
     //
-    //   SUM(X_i - X_bar)^2 = SUM(X_i^2) - (SUM(X_i))^2/n
+    //   SUM(X_i - X_bar)² = SUM(X_i²) - ( SUM(X_i)² )/n
     //
     // where X_i is a particular observation and X_bar is the average for
     // the set
 
     let tsumx = 0, tsumx2 = 0, tn = 0;
 
-    for(let i = 0; i < dl; i++ ) {
-      data[i].ss =
-        data[i].sumx2 - Math.pow( data[i].sumx, 2 )/data[i].n;
-      residual.df += data[i].n-1;
-      residual.ss += data[i].ss;
-      total.df += data[i].n;
-      tsumx += data[i].sumx;
-      tsumx2 += data[i].sumx2;
-      tn += data[i].n;
+    for(let d of data ) {
+      d.ss = d.sumx2 - Math.pow( d.sumx, 2 )/d.n;
+      residual.df += d.n-1;
+      residual.ss += d.ss;
+      total.df += d.n;
+      tsumx += d.sumx;
+      tsumx2 += d.sumx2;
+      tn += d.n;
     }
+
     total.df -= 1;
     total.ss = tsumx2 - Math.pow( tsumx, 2 )/tn;
     residual.orig_df = residual.df;

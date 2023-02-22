@@ -54,6 +54,14 @@ input[type=radio]{
   margin: 10px 10px 10px 10px; 
 }   
 
+.ht {
+  display: block;
+  vertical-align: top;
+  border: 1px solid black;
+  padding: 10px;
+  margin: 10px 10px 10px 10px;
+}
+
 table {
   border-collapse: collapse; 
 }
@@ -64,7 +72,11 @@ table, th, td {
 
 td, th {
   padding: 5px 10px 5px 10px;  
-}    
+}
+
+.flt {
+  text-align: right;
+}
 
 tr:nth-child(even) {
   background-color: #f2f2f2;

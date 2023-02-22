@@ -8,7 +8,9 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
-  const DPL  = 4; // Number of decimal places
+  var filename= '';
+
+  const DPL  = 5; // Number of decimal places
 
   // Define these two constants which denote factor types. The choice of 0
   // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
@@ -198,18 +200,21 @@ var anova = (function () {
   
   var nesting = false;
 
-  // Do not show multiple tests for main factors that
-  // participate in significant interactions
-
-  var ignoreinteractions = false;
-
-
   var max_value = Number.MIN_SAFE_INTEGER;
 
   var min_value = Number.MAX_SAFE_INTEGER;  
 
+  /****************************************************************************/
+  /*                                                                          */
+  /*     some variables that chabge the behaviour of the program              */
+  /*                                                                          */
+  /****************************************************************************/
+
   // default rejection level (alpha)
   const DEFAULT_REJECTION_LEVEL = 0.05;
+
+  // Use a rejection criterium (alpha)
+  var alpha = false;
 
   // set default rejection level for ANOVA F tests
   var rejection_level = DEFAULT_REJECTION_LEVEL;
@@ -217,7 +222,11 @@ var anova = (function () {
   // set default rejection level for multiple tests
   var mt_rejection_level = DEFAULT_REJECTION_LEVEL;
   
-  var filename= '';
+
+  // Do not show multiple tests for main factors that
+  // participate in significant interactions
+
+  var ignoreinteractions = false;
 
 
 
@@ -895,19 +904,6 @@ var anova = (function () {
 
       if( data[i].n > maxn ) maxn = data[i].n;
 
-      // Compute the average of values
-
-      data[i].average = data[i].sumx/data[i].n;
-
-      // Compute the variance of values
-
-      data[i].variance = data[i].sumx2 - Math.pow(data[i].sumx,2)/data[i].n;
-      data[i].variance = data[i].variance/(data[i].n-1);
-
-      // Sort data values to compute the median
-
-      data[i].median = median( data[i].values );
-
     }
     
     // Go along all cells and verify that each has a similar number of
@@ -917,40 +913,57 @@ var anova = (function () {
     // decrease the degrees of freedom of the 'Error' (or 'Residual')
     // and the 'Total' terms of the ANOVA
     
-    for(let i = 0; i < dl; i++ ) {
-      if( data[i].n < maxn ) {
-        let diff = maxn - data[i].n;
+    for ( let c of data ) {
+      if( c.n < maxn ) {
+        let diff = maxn - c.n;
         for( let j = 0; j < diff; j++) {
           corrected_df++;
-          data[i].sumx += data[i].average;
-          data[i].sumx2 += Math.pow( data[i].average, 2 );
-          data[i].n++;
+          c.sumx += c.average;
+          c.sumx2 += Math.pow( c.average, 2 );
+          c.n++;
         }
       }
+
+      // After rebalancing each unbalanced cell if needed compute its
+      // 'average', 'variance', and 'median'
+
+      // Compute the average of values
+
+      c.average = c.sumx/c.n;
+
+      // Compute the variance of values
+
+      c.variance = ( c.sumx2 - Math.pow( c.sumx, 2 )/c.n ) / ( c.n-1 );
+
+      // Sort data values to compute the median
+
+      c.median = median( c.values );
     }
+
+
     
-    // After rebalancing the data, compute Residual and Total sums of squares
-    // and their respective degrees of freedom. Compute also the squared
-    // differences between observations and their averages for each partial
-    // using the equation:
+    // Finally, compute Residual and Total sums of squares and their
+    // respective degrees of freedom. Compute also the squared differences
+    // between observations and their averages for each partial using the
+    // equation:
     //
-    //   SUM(X_i - X_bar)^2 = SUM(X_i^2) - (SUM(X_i))^2/n
+    //   SUM(X_i - X_bar)² = SUM(X_i²) - ( SUM(X_i)² )/n
     //
     // where X_i is a particular observation and X_bar is the average for
     // the set
 
     let tsumx = 0, tsumx2 = 0, tn = 0;
 
-    for(let i = 0; i < dl; i++ ) {
-      data[i].ss =
-        data[i].sumx2 - Math.pow( data[i].sumx, 2 )/data[i].n;
-      residual.df += data[i].n-1;
-      residual.ss += data[i].ss;
-      total.df += data[i].n;
-      tsumx += data[i].sumx;
-      tsumx2 += data[i].sumx2;
-      tn += data[i].n;
+    for(let d of data ) {
+      d.ss = d.sumx2 - Math.pow( d.sumx, 2 )/d.n;
+      residual.df += d.n-1;
+      residual.ss += d.ss;
+      total.df += d.n;
+      tsumx += d.sumx;
+      tsumx2 += d.sumx2;
+      tn += d.n;
     }
+
     total.df -= 1;
     total.ss = tsumx2 - Math.pow( tsumx, 2 )/tn;
     residual.orig_df = residual.df;
@@ -1277,20 +1290,25 @@ var anova = (function () {
     for(let i = 0, len = terms.length; i < len; i++ ) {
       text += '<tr>';
       text += '<td>' + terms[i].name + '</td>';
-      text += '<td>' + terms[i].SS.toFixed(DPL).toString() + '</td>';
+      text += '<td class=\"flt\">' + terms[i].SS.toFixed(DPL).toString() + '</td>';
       text += '<td>' + terms[i].df.toString() + '</td>';
       if( terms[i].name != 'Total' ) {
-        text += '<td>' + terms[i].MS.toFixed(DPL).toString() + '</td>';
+        text += '<td class=\"flt\">' + terms[i].MS.toFixed(DPL).toString() + '</td>';
       } else {
         text += '<td></td>';
       }
       let nm = terms[i].against;
       if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td>' + terms[i].F.toFixed(DPL).toString() +'</td>';
+        text += '<td class=\"flt\">' + terms[i].F.toFixed(DPL).toString() +'</td>';
         let prob = '';
-        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(DPL).toString();
-        else prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
-        text += '<td>' + prob + '</td>';
+        if ( terms[i].P > rejection_level )
+             prob = terms[i].P.toFixed(DPL).toString();
+        else {
+          if( alpha ) {
+            prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
+          } else prob = terms[i].P.toFixed(DPL).toString();
+        }
+        text += '<td class=\"flt\">' + prob + '</td>';
         text += '<td>' + terms[nm].name + '</td>';
       } else {
         text += '<td></td>';
@@ -1306,11 +1324,6 @@ var anova = (function () {
 
     let d = document.getElementById('analysis');
     d.innerHTML = text;
-
-    // Select ANOVA results tab ('analysis') using ui function 'select
-    // hidding all other tabs
-    //
-    // selectTab('analysis');
         
   }  
 
@@ -1524,7 +1537,7 @@ var anova = (function () {
 
     // Panel to transform data
 
-    table += '<div class="ct">' +
+    table += '<div class="ct" id="transforms">' +
       '<h3>Transformations</h3>'+
       '<p><input type="radio" name="transf" value="none"' +
       ' onclick="anova.transformData(0)" checked>None</p>' +
@@ -1902,14 +1915,14 @@ var anova = (function () {
 
     let d = document.getElementById('homogen');
 
-    d.innerHTML = '<div class="ct"><h2>Cochran\'s test</h2>' +
+    d.innerHTML = '<div class="ht"><h2>Cochran\'s test</h2>' +
                   testCochran() +  '</div>';
 
-    d.innerHTML += '<div class="ct"><h2>Bartlett\'s test</h2>' +
+    d.innerHTML += '<div class="ht"><h2>Bartlett\'s test</h2>' +
                    testBartlett() +  '</div>';
 
-//     d.innerHTML += '<div class="ct"><h2>Levene\'s test</h2>' +
-//                    testLevene() +  '</div>';
+    d.innerHTML += '<div class="ht"><h2>Levene\'s test</h2>' +
+                    testLevene() +  '</div>';
 
   }
 
@@ -2002,10 +2015,11 @@ var anova = (function () {
     if( prob < 0 ) prob = 0;
      
     let result = '';
-    result += '<p>Bartlett\'s Test for <b><i>k</i> = ' + k.toString() +
+    result += '<p>&#120594;<sup>2</sup> = ' + bartlett_k.toFixed(DPL) + '</p>' +
+              '<p>for <b><i>k</i> = ' + k.toString() +
               '</b> averages and <b>&nu; = ' + (k-1).toString() +
-              '</b> degrees of freedom: <b>' + bartlett_k.toString() +
-              '</b></p><p>P = <b>' + prob.toString() + '</b></p>';
+              '</b> degrees of freedom: <b>' +
+              '</b></p><p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
     
     return result;
     
@@ -2077,11 +2091,11 @@ var anova = (function () {
     //P = jStat.centralF.cdf(f, df * (k - 1.0), df) * k;
 
     let result = '';
-    result += '<p>Cochran\'s Test for <b><i>k</i> = ' +
-              k.toString() + '</b> averages and <b>&nu; = ';
-    result += df.toString() + '</b> degrees of freedom: <b>' +
-              cochran_C.toString() + '</b></p>';
-    result += '<p>P = <b>' + prob.toString() + '</b></p>';
+    result += '<p>C = ' + cochran_C.toFixed(DPL) + '</p>' +
+              '<p>for <b><i>k</i> = ' + k.toString() +
+              '</b> averages and <b>&nu; = ' + df.toString() +
+              '</b> degrees of freedom</p>' +
+              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
     
     // Because of the problems mentioned above, and the fact that there is not
     // a true CDF function for Cochran's C, we also provide critical values
@@ -2102,14 +2116,14 @@ var anova = (function () {
     cv05 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.05/k, df, df*(k-1))));
     cv01 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.01/k, df, df*(k-1))));
     
-    result += "<p>Critical values for &alpha;</p>";
-    result += "<p><i>0.10</i>: " + cv10.toString() + ", hence variances are ";
+    result += "<p>Critical values of C for</p>";
+    result += "<p>&alpha; = <i>0.10</i> &xrarr; " + cv10.toFixed(DPL) + ", hence variances are ";
     result += (cochran_C > cv10 ? "heterogeneous":"homogeneous");
     result += "</p>";
-    result += "<p><i>0.05</i>: " + cv05.toString() + ", hence variances are ";
+    result += "<p>&alpha; = <i>0.05</i> &xrarr; " + cv05.toFixed(DPL) + ", hence variances are ";
     result += (cochran_C > cv05 ? "heterogeneous":"homogeneous");
     result += "</p>";
-    result += "<p><i>0.01</i>: " + cv01.toString() + ", hence variances are ";
+    result += "<p>&alpha; = <i>0.01</i> &xrarr; " + cv01.toFixed(DPL) + ", hence variances are ";
     result += (cochran_C > cv01 ? "heterogeneous":"homogeneous");
     result += "</p>";
 
@@ -2135,83 +2149,158 @@ var anova = (function () {
     //
     // k    = number of means being compared
     // N    = Sum[N_i]
-    // N_i  = size for mean i (sample sizes must be similar: balanced analysis)
-    // Z_i. = mean of group i
-    // Z_.. = average of Z_ij
+    // N_i  = Ni  = sample size for each mean i (sample sizes are equal)
+    // Z_i. = Zi  = mean of group i
+    // Z_.. = Z   = average of Z_ij
+    // Z_ij = Zij = | Y_ij - Y_i. |
+    //
+    // Y_ij = Yij = individual observation
+    // Y_i. = Yi  = mean of cell or group i
+    //
+    // The Brown–Forsythe test is a variant of the Levene test where
+    // instead of the average Y_i. the median Y_i. is used to compute
     // Z_ij = | Y_ij - Y_i. |
     //
-    // Y_ij = individual observation
-    // Y_i. = median of cell or group i
-    //
-    // These quantities are already computed from the information on the
-    // 'cells' array, which has the sum of Z_ij's and the sum of squared
-    // Z_ij's per combinaton of levels of factors, plus the averages Z_i.
-    // for each combination.
-
-    // k denotes the total number of averages involved in the test,
-    // determind by all possible combinations between factor levels
+    // For each cell we already have the mean (Y_i.) in variable
+    // 'data[i].average', the N_i ('replicates'), 'k' denoting the total
+    // number of averages involved in the test ('data.length'),
 
     let k = data.length;
 
     // Compute N (total number of observations)
+    // Since all cells have the same number of replicates, another way to
+    // compute N would be N = k*replicates;
     let N = 0, W = 0;
     for ( let i = 0; i < k; i++ ) N += data[i].n;
 
+    // Compute the first fraction of W (only integers)
     W = (N-k)/(k-1);
 
-    // Compute Z_ij = Sum( |Z_ij - Median_i| )
+    // For each cell, we should compute the deviations of individual values
+    // to the median of the cell using the modulo |Y_ij - Y_i.|. These
+    // deviations should be summed into Z_.. (denoted by variable 'Z')
+    //
+    // The donominator of the formula is computed by the sum of the sum
+    // of squared individual Z_ij deviations to their average Z_i. Remember
+    // that Z_ij = Sum[|Y_ij-Y_i|] i.e., sum of diferences of observations in
+    // realtion to their median. The individual Z_ij are not necessary. We
+    // need them to compute the square of their deviation to Z_i. averages,
+    // which sum will give the denominator of the W formula.
 
-    let Zij = 0, Z = 0;
-    for( let i = 0; i < k; i++ ) {
-      for( let j = 0; j < data[i].values.length; j++ ) {
-        Zij += Math.abs( data[i].values[j] - data[i].median );
+    let Z = 0, Zi = [], zsum, zsum2, denom = 0, z;
+    for( let d of data ) {
+      zsum = 0, zsum2 = 0;
+      for( let v of d.values ) {
+        z = Math.abs( v - d.average );
+        zsum  += z;
+        zsum2 += Math.pow( z, 2 );
+        Z     += z;
       }
+      // Now compute Zi for this cell
+      Zi.push(zsum/replicates);
+      denom += zsum2 - Math.pow( zsum, 2 )/replicates;
     }
 
-    // Compute the numerator Sum[ N_i*(Z_i. - Z_..)² ]
-    // Z_i. are the group means
-    // Z_.. is the grand mean
-    // To alculate the above mentioned quantity it's
-    // better to calculate the sum of all means and the
-    // sum of all squared means. The formula
-    //
-    // Sum Z_i² - (Sum )²/N is equivalent to
-    //
-    // Sum[ N_i*(Z_i. - Z_..)² ]
-//
-//     let A = 0, a1;
-//     for( let i = 0; i < k; i++ ) {
-//       a1 = partials[i].sumx2 - Math.pow(partials[i].sum, 2)/partials[i].n;
-//       A += partials[i].n * a1;
-//     }
-//
-//     // Compute the denominator Sum[ Sum(Z_ij - Z_i.)² ]
-//
-//     let B = 0, sumx = 0, sumx2 = 0, nt = 0;
-//     for( let i = 0; i < k; i++ ) {
-//       sumx  += partials[i].sum;
-//       sumx2 += partials[i].sumx2;
-//       nt    += partials[i].n;
-//     }
-//     let b1 = sumx2 - Math.pow(sumx,2)/nt;
-//
-//     //console.log(W);
-//     console.log(data)
-//     //console.table(partials);
-//
-//     // The corresponding degrees of freedom for each average (which should be
-//     // equal for balanced analysis) are computed from 'replicates' - 1
-//
+    // Compute the average of the sum of Z's
+    Z = Z/N;
+
+    // Now we know Z_i for each cell (stored in 'Zi' array) and Z_.. (stored
+    // in 'Z') and we can compute the denominator Sum[ N_i*(Z_i. - Z_..)² ]
+
+    let numer = 0;
+
+    for( let zi of Zi ) {
+      numer += replicates * Math.pow( zi - Z , 2 );
+    }
+
+    let levene = W * numer/denom;
+
     let df = replicates - 1;
 
-    let prob = 0.0, levene_w = 0.0;
+    let prob = 1 - jStat.centralF.cdf( levene, k - 1, N - k );
 
     let result = '';
-    result += '<p>Levene\'s Test for <b><i>k</i> = ' +
-              k.toString() + '</b> averages and <b>&nu; = ';
-    result += df.toString() + '</b> degrees of freedom: <b>' +
-              levene_w.toString() + '</b></p>';
-    result += '<p>P = <b>' + prob.toString() + '</b></p>';
+    result += '<p>F = ' + levene.toFixed(DPL) + '</p>' +
+              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
+              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
+              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+
+    let cv10 = 0;
+    let cv05 = 0;
+    let cv01 = 0;
+
+    cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
+    cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
+    cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+
+    result += '<p>Critical values for</p>' +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              ', hence variances are ' +
+              (levene > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              ', hence variances are ' +
+              (levene > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              ', hence variances are ' +
+              (levene > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
+
+    // For the Brown–Forsythe test recompute Z but this time using
+    // deviation to the median instead of the average
+
+    Z = 0, Zi = [], zsum, zsum2, denom = 0, z;
+    for( let d of data ) {
+      zsum = 0, zsum2 = 0;
+      for( let v of d.values ) {
+        z = Math.abs( v - d.median );
+        zsum  += z;
+        zsum2 += Math.pow( z, 2 );
+        Z     += z;
+      }
+      // Now compute Zi for this cell
+      Zi.push(zsum/replicates);
+      denom += zsum2 - Math.pow( zsum, 2 )/replicates;
+    }
+
+    // Compute the average of the sum of Z's
+    Z = Z/N;
+
+    // Now we know Z_i for each cell (stored in 'Zi' array) and Z_.. (stored
+    // in 'Z') and we can compute the denominator Sum[ N_i*(Z_i. - Z_..)² ]
+
+    numer = 0;
+
+    for( let zi of Zi ) {
+      numer += replicates * Math.pow( zi - Z , 2 );
+    }
+
+    let brown_forsythe = W * numer/denom;
+
+    prob = 1 - jStat.centralF.cdf( brown_forsythe, k - 1, N - k );
+
+    result += '<h2>Brown-Forsythe\'s test</h2>' +
+              '<p>F = ' + brown_forsythe.toFixed(DPL) + '</p>' +
+              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
+              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
+              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+
+    cv10 = 0;
+    cv05 = 0;
+    cv01 = 0;
+
+    cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
+    cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
+    cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+
+    result += '<p>Critical values for</p>' +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              ', hence variances are ' +
+              (brown_forsythe > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              ', hence variances are ' +
+              (brown_forsythe > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              ', hence variances are ' +
+              (brown_forsythe > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
 
     return result;
 
@@ -2695,11 +2784,76 @@ var anova = (function () {
 
   /*************************************************************************/
   /*                                                                       */
-  /* General configuration settings for ANOVA                              */
+  /*          General configuration settings for ANOVA                     */
   /*                                                                       */
   /*************************************************************************/
 
-  function settings() {
+  /*************************************************************************/
+  /*                                                                       */
+  /*                               setSettings                             */
+  /*                                                                       */
+  /* This function appends a list of settings into the <div id="settings"> */
+  /*                                                                       */
+  /*************************************************************************/
+
+  let sts = [
+    {
+      name : 'Use rejection criterium (&alpha;)',
+      set  : '<input type="checkbox" id="use_alpha"' +
+             ' onchange="anova.useAlpha()"',
+      desc : 'Check if you want to see in the ANOVA table F probabilities ' +
+             'highlighted whenever the F statistic surpasses the critical ' +
+             'level for the &alpha; selected. If the probability ' +
+             'associated to F is smaller than &alpha;, the probability is ' +
+             'displayed in <b><em>emphasized bold</em></b> font. For ' +
+             'each term, you should interpret the probabilities in the ' +
+             'ANOVA table as the probability of obtaining an F value ' +
+             'equal or larger than the observed F value.'
+    },
+    {
+      name : 'Ignore interactions',
+      set  : '<input type="checkbox" id="ignore_interactions"' +
+             ' onchange="anova.ignoreInteractions()"',
+      desc : 'Check if you want to see multiple <em>a posteriori</em> ' +
+             'comparison tests for main factors that are involved in ' +
+             'significant interactions with other factors.'
+    },
+    {
+      name : '&alpha;',
+      set  : '<input type="number" id="anova_alpha" value="0.05" ' +
+             'min="0.00000" max="0.999999" step="0.05" onchange="' +
+             'anova.setAlpha()"/>',
+      desc : 'Rejection criterium for H<sub>0</sub> in main ANOVA tests'
+    }
+  ];
+
+  function setSettings() {
+
+    let elem = document.getElementById("settings");
+
+    let text = '<table><thead><tr><td>Setting</td><td>Value</td><td>' +
+              'Description</td></tr></thead><tbody>';
+    for( let s of sts ) {
+      text += '<tr><td>' + s.name + '</td><td>' + s.set + '</td><td>' +
+               s.desc + '</td></tr>';
+    }
+
+    text += '</tbody></table>';
+
+    elem.innerHTML = text;
+
+  }
+
+  /*************************************************************************/
+  /*                                                                       */
+  /*                           displaySettings                             */
+  /*                                                                       */
+  /* This function enables the Settings <div> to be viewd while hidding    */
+  /* the ANOVA <div                                                        */
+  /*                                                                       */
+  /*************************************************************************/
+
+  function displaySettings() {
 
     let elem = document.getElementById("anovadisplay");
     let sets = document.getElementById("settings");
@@ -2712,6 +2866,7 @@ var anova = (function () {
       sets.style.display = "block";
     }
   }
+
 
   /*************************************************************************/
   /*                                                                       */
@@ -2741,92 +2896,112 @@ var anova = (function () {
         break;
       case 1:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.sqrt( data[i].values[j] );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.sqrt( v );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 2:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.pow( data[i].values[j], 1/3 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.pow( v , 1/3 );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 3:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.pow( data[i].values[j], 1/4 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.pow( v , 1/4 );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 4:
         if( min_value > 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j]  = Math.log( data[i].values[j] + 1 );
-              data[i].values[j] /= Math.log(10);
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.log( v +1 )/Math.log(10);
+            });
           }
         } else alert('Cannot apply transformation to negative' +
                      'or null values!');
         break;
       case 5:
         if( min_value > 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.log( data[i].values[j] + 1 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.log( v + 1 );
+            });
           }
         } else alert('Cannot apply transformation to' +
                      ' negative or null values!');
         break;
       case 6:
         if( (min_value >= 0) && ( max_value <= 1 ) ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.asin( data[i].values[j] );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.asin( v );
+            });
           }
         } else alert('Cannot apply transformation to values larger than 1' +
                      ' or smaller than 0!');
         break;
       case 7:
-        for( let i = 0; i < data.length; i++ ) {
-          for( let j = 0; j < data[i].values.length; j++ ) {
-            data[i].values[j] *= multc;
-          }
+        for( let d of data ) {
+          d.values.forEach( function(v, idx, arr) {
+            arr[idx] = v * multc;
+          });
         }
         break;
       case 8:
         if( divc != 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] /= divc;
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = v / divc;
+            });
           }
         } else alert('Cannot divide by zero!');
         break;
       case 9:
-        data.forEach( e => Math.pow( e.value, powc ) );
+        for( let d of data ) {
+          d.values.forEach( function(v, idx, arr) {
+            arr[idx] = Math.pow( v, powc );
+          });
+        }
         break;
     }
 
-    // Reset data structures
+    // Reset a few data structures before recomputing cells sums of squares.
+    // Keep the 'factors' and 'data' arrays only, but clean some derivd
+    // information
 
-    cleanVariables();
+    for ( let f of factors ) {
+      f.name = f.orig_name;
+      f.nlevels = f.levels.length;
+      f.nestedin = new Array( nfactors ).fill(0);
+      f.depth = 0;
+    }
+
+    terms    = [];
+    mcomps   = [];
+    corrected_df = 0;
+    replicates   = 0;
+    total    = {df: 0, ss: 0};
+    residual = {name: "Error", df: 0, ss: 0};
+    nesting  = false;
+
+    // Display the data table
+
+    displayDataTable();
 
     // Restart the ANOVA by computing 'cells' or 'partials'
 
     computeCells();
-
-    displayDataTable();
 
   }
   
@@ -2917,51 +3092,64 @@ var anova = (function () {
 
   function ignoreInteractions() {
 
-    let h = document.getElementById("ignore_interactions");
-
     if ( ignoreinteractions === false ) ignoreinteractions = true;
     else ignoreinteractions = false;
 
   }
 
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             useAlpha                                  */
+  /*                                                                       */
+  /*  Use a rejection criterium (alpha) to establish if a given p-value is */
+  /*  "statistically significant" or not. If checked, the p-values will be */
+  /*  displayed in bold and emphasized font whenever they are lower than   */
+  /*  the criterium defined below                                          */
+  /*                                                                       */
+  /*************************************************************************/
+
+  function useAlpha() {
+
+    if ( alpha === false ) alpha = true;
+    else alpha = false;
+
+    displayANOVA();
+
+  }
 
   /*************************************************************************/
   /*                                                                       */
   /*                               resetData                               */
   /*                                                                       */
-  /* Here, we use the saved data values for each entry in the data list to */
-  /* reset the transformed values. Note that after resetting the data it   */
-  /* is necessary to clean all the intermediate calculation structures and */
-  /* redo the analysis again!                                              */
+  /*  Here, we use the saved data values for each cell in the 'data'       */
+  /*  structure to reset the transformed values. Note that after resetting */
+  /*  the data it is necessary to clean all the intermediate calculation   */
+  /*  structures and redo the analysis again!                              */
   /*                                                                       */
   /*************************************************************************/
 
   function resetData() {
 
-    let h = document.getElementsByClassName("tabcontent");
-    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
+    let tabs = document.getElementsByClassName("tabcontent");
+    // clean all 'tabs' of class 'tabcontent' because they will be
+    // overwritten, except for the one with data transformations
+    // with 'id' == 'datatab'. For this one, we just
+    for ( let t of tabs ) {
+      if( tabs.id != 'datatab' ) tabs.innerHTML = "";
+    }
 
     max_value = Number.MIN_SAFE_INTEGER;
     min_value = Number.MAX_SAFE_INTEGER;
 
-    for( let i = 0; i < data.length; i++ ) {
-      for( let j = 0; j < data[i].values.length; j++ ) {
-        data[i].values[j] = data[i].originals[j];
-        if ( data[i].values[j] > max_value ) max_value = data[i].values[j];
-        if ( data[i].values[j] < min_value ) min_value = data[i].values[j];
+    for( let d of data ) {
+      for ( let i = 0; i < d.values.length; i++ ){
+        d.values[i] = d.originals[i];
+      }
+      for( let v of d.values ) {
+        if ( v > max_value ) max_value = v;
+        if ( v < min_value ) min_value = v;
       }
     }
-
-    console.log("Here")
-
-    cleanVariables();
-
-    // Start the ANOVA by computing 'cells' or 'partials' and then
-    // computing the 'terms' of the analysis
-
-    computeCells();
-
-    displayData();
   }
 
 
@@ -2980,9 +3168,9 @@ var anova = (function () {
     // Clear results in all <divs> of class 'anovaTabContents' which are
     // children of <div id='anova'>
 
-    let s = document.getElementsByClassName('tabcontent')
-    for( let i = 0, len = s.length; i < len; i++ ) {
-      if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = '';
+    let elems = document.getElementsByClassName('tabcontent')
+    for( let s of elems ) {
+      if (typeof(s) !== 'undefined' && s !== null) s.innerHTML = '';
     }
 
     // Reset main variables
@@ -2993,41 +3181,15 @@ var anova = (function () {
     terms    = [];
     mcomps   = [];
     corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
+    replicates   = 0;
+    total    = {df: 0, ss: 0};
     residual = {name: 'Error', df: 0, ss: 0};
     nesting = false;
     max_value = Number.MIN_SAFE_INTEGER;
     min_value = Number.MAX_SAFE_INTEGER;
   }
 
-  /*************************************************************************/
-  /*                                                                       */
-  /*                        cleanVariables                                 */
-  /*                                                                       */
-  /* Everytime we reset or transform data we ned to recompute all main     */
-  /* variables for the ANOVA and eventually _a_posteriori_ multiple tests  */
-  /*                                                                       */
-  /*************************************************************************/
 
-  function cleanVariables() {
-
-    for( let i = 0; i < factors.length; i++ ) {
-      factors[i].name = factors[i].orig_name;
-      factors[i].nlevels = factors[i].levels.length;
-      factors[i].nestedin = new Array( nfactors ).fill(0);
-      factors[i].depth = 0;
-    }
-
-    terms    = [];
-    mcomps   = [];
-    corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
-    residual = {name: "Error", df: 0, ss: 0};
-    nesting = false;
-
-  }
 
   
   /*************************************************************************/
@@ -3045,7 +3207,9 @@ var anova = (function () {
     resetData: resetData,
     transformData: transformData,
     multipleTests: multipleTests,
-    settings: settings,
+    displaySettings: displaySettings,
+    setSettings: setSettings,
+    useAlpha: useAlpha,
     ignoreInteractions: ignoreInteractions
     
   } // End of 'return' (exported function)
@@ -3083,6 +3247,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+  anova.setSettings();
+
   // Hide all tab contents
   let b = document.getElementsByClassName('tabcontent');
   for(let i = 0; i < b.length; i++) b[i].style.display = 'none';
@@ -3100,7 +3266,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   document.getElementById('activate_settings').onclick = function() {
-    anova.settings();
+    anova.displaySettings();
   };
     
 });

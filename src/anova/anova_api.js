@@ -14,7 +14,9 @@
     resetData: resetData,
     transformData: transformData,
     multipleTests: multipleTests,
-    settings: settings,
+    displaySettings: displaySettings,
+    setSettings: setSettings,
+    useAlpha: useAlpha,
     ignoreInteractions: ignoreInteractions
     
   } // End of 'return' (exported function)
@@ -72,6 +74,8 @@ document.addEventListener('DOMContentLoaded', function () {
   //!DEBUG
 
 
+  anova.setSettings();
+
   // Hide all tab contents
   let b = document.getElementsByClassName('tabcontent');
   for(let i = 0; i < b.length; i++) b[i].style.display = 'none';
@@ -89,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   document.getElementById('activate_settings').onclick = function() {
-    anova.settings();
+    anova.displaySettings();
   };
     
 });

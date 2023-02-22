@@ -18,7 +18,7 @@
 
     // Panel to transform data
 
-    table += '<div class="ct">' +
+    table += '<div class="ct" id="transforms">' +
       '<h3>Transformations</h3>'+
       '<p><input type="radio" name="transf" value="none"' +
       ' onclick="anova.transformData(0)" checked>None</p>' +

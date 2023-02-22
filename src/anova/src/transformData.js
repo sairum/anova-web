@@ -26,91 +26,111 @@
         break;
       case 1:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.sqrt( data[i].values[j] );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.sqrt( v );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 2:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.pow( data[i].values[j], 1/3 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.pow( v , 1/3 );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 3:
         if( min_value >= 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.pow( data[i].values[j], 1/4 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.pow( v , 1/4 );
+            });
           }
         } else alert('Cannot apply transformation to negative values!');
         break;
       case 4:
         if( min_value > 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j]  = Math.log( data[i].values[j] + 1 );
-              data[i].values[j] /= Math.log(10);
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.log( v +1 )/Math.log(10);
+            });
           }
         } else alert('Cannot apply transformation to negative' +
                      'or null values!');
         break;
       case 5:
         if( min_value > 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.log( data[i].values[j] + 1 );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.log( v + 1 );
+            });
           }
         } else alert('Cannot apply transformation to' +
                      ' negative or null values!');
         break;
       case 6:
         if( (min_value >= 0) && ( max_value <= 1 ) ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] = Math.asin( data[i].values[j] );
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = Math.asin( v );
+            });
           }
         } else alert('Cannot apply transformation to values larger than 1' +
                      ' or smaller than 0!');
         break;
       case 7:
-        for( let i = 0; i < data.length; i++ ) {
-          for( let j = 0; j < data[i].values.length; j++ ) {
-            data[i].values[j] *= multc;
-          }
+        for( let d of data ) {
+          d.values.forEach( function(v, idx, arr) {
+            arr[idx] = v * multc;
+          });
         }
         break;
       case 8:
         if( divc != 0 ) {
-          for( let i = 0; i < data.length; i++ ) {
-            for( let j = 0; j < data[i].values.length; j++ ) {
-              data[i].values[j] /= divc;
-            }
+          for( let d of data ) {
+            d.values.forEach( function(v, idx, arr) {
+              arr[idx] = v / divc;
+            });
           }
         } else alert('Cannot divide by zero!');
         break;
       case 9:
-        data.forEach( e => Math.pow( e.value, powc ) );
+        for( let d of data ) {
+          d.values.forEach( function(v, idx, arr) {
+            arr[idx] = Math.pow( v, powc );
+          });
+        }
         break;
     }
 
-    // Reset data structures
+    // Reset a few data structures before recomputing cells sums of squares.
+    // Keep the 'factors' and 'data' arrays only, but clean some derivd
+    // information
 
-    cleanVariables();
+    for ( let f of factors ) {
+      f.name = f.orig_name;
+      f.nlevels = f.levels.length;
+      f.nestedin = new Array( nfactors ).fill(0);
+      f.depth = 0;
+    }
+
+    terms    = [];
+    mcomps   = [];
+    corrected_df = 0;
+    replicates   = 0;
+    total    = {df: 0, ss: 0};
+    residual = {name: "Error", df: 0, ss: 0};
+    nesting  = false;
+
+    // Display the data table
+
+    displayDataTable();
 
     // Restart the ANOVA by computing 'cells' or 'partials'
 
     computeCells();
-
-    displayDataTable();
 
   }

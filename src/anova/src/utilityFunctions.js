@@ -86,51 +86,64 @@
 
   function ignoreInteractions() {
 
-    let h = document.getElementById("ignore_interactions");
-
     if ( ignoreinteractions === false ) ignoreinteractions = true;
     else ignoreinteractions = false;
 
   }
 
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             useAlpha                                  */
+  /*                                                                       */
+  /*  Use a rejection criterium (alpha) to establish if a given p-value is */
+  /*  "statistically significant" or not. If checked, the p-values will be */
+  /*  displayed in bold and emphasized font whenever they are lower than   */
+  /*  the criterium defined below                                          */
+  /*                                                                       */
+  /*************************************************************************/
+
+  function useAlpha() {
+
+    if ( alpha === false ) alpha = true;
+    else alpha = false;
+
+    displayANOVA();
+
+  }
 
   /*************************************************************************/
   /*                                                                       */
   /*                               resetData                               */
   /*                                                                       */
-  /* Here, we use the saved data values for each entry in the data list to */
-  /* reset the transformed values. Note that after resetting the data it   */
-  /* is necessary to clean all the intermediate calculation structures and */
-  /* redo the analysis again!                                              */
+  /*  Here, we use the saved data values for each cell in the 'data'       */
+  /*  structure to reset the transformed values. Note that after resetting */
+  /*  the data it is necessary to clean all the intermediate calculation   */
+  /*  structures and redo the analysis again!                              */
   /*                                                                       */
   /*************************************************************************/
 
   function resetData() {
 
-    let h = document.getElementsByClassName("tabcontent");
-    for ( let i = 0, len = h.length; i < len; i++ ) h[i].innerHTML = "";
+    let tabs = document.getElementsByClassName("tabcontent");
+    // clean all 'tabs' of class 'tabcontent' because they will be
+    // overwritten, except for the one with data transformations
+    // with 'id' == 'datatab'. For this one, we just
+    for ( let t of tabs ) {
+      if( tabs.id != 'datatab' ) tabs.innerHTML = "";
+    }
 
     max_value = Number.MIN_SAFE_INTEGER;
     min_value = Number.MAX_SAFE_INTEGER;
 
-    for( let i = 0; i < data.length; i++ ) {
-      for( let j = 0; j < data[i].values.length; j++ ) {
-        data[i].values[j] = data[i].originals[j];
-        if ( data[i].values[j] > max_value ) max_value = data[i].values[j];
-        if ( data[i].values[j] < min_value ) min_value = data[i].values[j];
+    for( let d of data ) {
+      for ( let i = 0; i < d.values.length; i++ ){
+        d.values[i] = d.originals[i];
+      }
+      for( let v of d.values ) {
+        if ( v > max_value ) max_value = v;
+        if ( v < min_value ) min_value = v;
       }
     }
-
-    console.log("Here")
-
-    cleanVariables();
-
-    // Start the ANOVA by computing 'cells' or 'partials' and then
-    // computing the 'terms' of the analysis
-
-    computeCells();
-
-    displayData();
   }
 
 
@@ -152,9 +165,9 @@
     // Clear results in all <divs> of class 'anovaTabContents' which are
     // children of <div id='anova'>
 
-    let s = document.getElementsByClassName('tabcontent')
-    for( let i = 0, len = s.length; i < len; i++ ) {
-      if (typeof(s[i]) !== 'undefined' && s[i] !== null) s[i].innerHTML = '';
+    let elems = document.getElementsByClassName('tabcontent')
+    for( let s of elems ) {
+      if (typeof(s) !== 'undefined' && s !== null) s.innerHTML = '';
     }
 
     // Reset main variables
@@ -165,39 +178,13 @@
     terms    = [];
     mcomps   = [];
     corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
+    replicates   = 0;
+    total    = {df: 0, ss: 0};
     residual = {name: 'Error', df: 0, ss: 0};
     nesting = false;
     max_value = Number.MIN_SAFE_INTEGER;
     min_value = Number.MAX_SAFE_INTEGER;
   }
 
-  /*************************************************************************/
-  /*                                                                       */
-  /*                        cleanVariables                                 */
-  /*                                                                       */
-  /* Everytime we reset or transform data we ned to recompute all main     */
-  /* variables for the ANOVA and eventually _a_posteriori_ multiple tests  */
-  /*                                                                       */
-  /*************************************************************************/
 
-  function cleanVariables() {
-
-    for( let i = 0; i < factors.length; i++ ) {
-      factors[i].name = factors[i].orig_name;
-      factors[i].nlevels = factors[i].levels.length;
-      factors[i].nestedin = new Array( nfactors ).fill(0);
-      factors[i].depth = 0;
-    }
-
-    terms    = [];
-    mcomps   = [];
-    corrected_df = 0;
-    replicates = 0;
-    total = {df: 0, ss: 0};
-    residual = {name: "Error", df: 0, ss: 0};
-    nesting = false;
-
-  }
 

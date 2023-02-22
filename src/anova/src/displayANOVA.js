@@ -20,20 +20,25 @@
     for(let i = 0, len = terms.length; i < len; i++ ) {
       text += '<tr>';
       text += '<td>' + terms[i].name + '</td>';
-      text += '<td>' + terms[i].SS.toFixed(DPL).toString() + '</td>';
+      text += '<td class=\"flt\">' + terms[i].SS.toFixed(DPL).toString() + '</td>';
       text += '<td>' + terms[i].df.toString() + '</td>';
       if( terms[i].name != 'Total' ) {
-        text += '<td>' + terms[i].MS.toFixed(DPL).toString() + '</td>';
+        text += '<td class=\"flt\">' + terms[i].MS.toFixed(DPL).toString() + '</td>';
       } else {
         text += '<td></td>';
       }
       let nm = terms[i].against;
       if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td>' + terms[i].F.toFixed(DPL).toString() +'</td>';
+        text += '<td class=\"flt\">' + terms[i].F.toFixed(DPL).toString() +'</td>';
         let prob = '';
-        if ( terms[i].P > rejection_level ) prob = terms[i].P.toFixed(DPL).toString();
-        else prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
-        text += '<td>' + prob + '</td>';
+        if ( terms[i].P > rejection_level )
+             prob = terms[i].P.toFixed(DPL).toString();
+        else {
+          if( alpha ) {
+            prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
+          } else prob = terms[i].P.toFixed(DPL).toString();
+        }
+        text += '<td class=\"flt\">' + prob + '</td>';
         text += '<td>' + terms[nm].name + '</td>';
       } else {
         text += '<td></td>';
@@ -49,10 +54,5 @@
 
     let d = document.getElementById('analysis');
     d.innerHTML = text;
-
-    // Select ANOVA results tab ('analysis') using ui function 'select
-    // hidding all other tabs
-    //
-    // selectTab('analysis');
         
   }  
