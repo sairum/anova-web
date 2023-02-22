@@ -13,7 +13,7 @@ While porting **anova-web** I aimed at developing a suit of software with the le
 
 `$ make watch`
 
-and edit the files under inside the folder *src/* (this includes css styles and JavaScript). Tu make use of the Makefile you need *inotifywatch*, a standard tool installed by default in most Linux system, and Douglas Crockford's *jsmin* (https://www.crockford.com/jsmin.html) for minification of JavaScript files. Other than that, **anova-web** depends only on three JavaScript libraries and one CSS Style sheet:
+and edit the files under inside the folder *src/* (this includes css styles and JavaScript). To make use of the Makefile you need *inotifywatch*, a standard tool installed by default in most Linux system, and Douglas Crockford's *jsmin* (https://www.crockford.com/jsmin.html) for minification of JavaScript files. Other than that, **anova-web** depends only on three JavaScript libraries and one CSS Style sheet:
 
 * JStat (https://github.com/jstat/jstat) for probability distributions and related stuff
 * FileSaver.js (https://github.com/eligrey/FileSaver.js/) to generate files to download
@@ -44,6 +44,8 @@ Another way to run **anova-web** is to uncompress or clone this github repositor
 
 ### General structure of the program
 ```
+tructure of the program
+
 openDataFile()
  │
  ├ resetAnalysis()
@@ -52,38 +54,38 @@ openDataFile()
  │
  ├ displayData()
  │
- └ computePartials()
+ └ computeCells()
      │
-     ├ DEBUG: displayPartials()
+     ├ DEBUG: displayCells()
      │
      ├ homogeneityTests()
      │
      └ buildTerms()
          │
-         └ getPartialSS()
-             │ 
+         └ getCellsSS()
+             │
              ├ DEBUG: displayTerms()
-             │ 
+             │
              ├ correctForNesting()
              │   │
              │   └ correctTermNames()
              │
              ├ DEBUG: displayFactors()
-             │ 
+             │
              ├ computeCTRules()
              │    │
              │    └ displayCTRules()
-             │ 
-             ├ DEBUG: displayTerms( "List of Corrected Terms" )
+             │
+             ├ DEBUG: displayTerms()
              │
              ├ displayAverages()
              │
              ├ buildMultipleComparisons()
-             │ 
+             │
              ├ displayMultipleComparisons()
              │
              └ displayANOVA()
- ```
+```
  
 
 
