@@ -1,8 +1,8 @@
   
   /*************************************************************************/
   /*                                                                       */
-  /* Here, we export several functions that allow us to interacting with   */
-  /* the anova object, keeping its internals hidden from the standard user */
+  /* Here, we export several functions that allow us to interact with the  */
+  /* anova object, keeping its internals hidden from the standard user     */
   /*                                                                       */
   /*************************************************************************/
   

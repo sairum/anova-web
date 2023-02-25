@@ -1,7 +1,7 @@
 .PHONY: css anovajs simulatejs samplejs chartjs clean watch optimize
 
-#CAT = @cat
-CAT =	@sed '/\#DEBUG/,/!DEBUG/d'
+CAT = @cat
+#CAT =	@sed '/\#DEBUG/,/!DEBUG/d'
 
 cssfiles = src/css/style.scss
 

@@ -246,219 +246,224 @@ var anova = (function () {
    
   function buildMultipleComparisons() {
 
+    //#DEBUG
+    console.log('buildMultipleComparisons() called');
+    //!DEBUG
     
     //console.log(terms)
       
-//     mcomps = [];
-//
-//     // Iterate through all 'terms' that are not the Residual (Error) or
-//     // the Total terms (these two are easily identified because their
-//     // attribute 'nlevels' = 0 and are in the end of the list of terms)
-//
-//     for(let t = 0, tln = terms.length; t < tln; t++ ) {
-//
-//       // Consider only those terms which have an F probability smaller than
-//       // the rejection level specified (usually 0.05). Also, ignore
-//       // interactions with more than three factors for simplicity
-//       // (terms with 'order' > 3).
-//
-//       if( ( terms[t].P < rejection_level ) && ( terms[t].nlevels > 0 ) &&
-//           ( terms[t].order < 4 ) && ( terms[t].against !== -1 ) ) {
-//
-//         // Consider only fixed factors or interactions containing fixed
-//         // factors. Multiple tests are useless for random factors. Go along
-//         // the array 'terms[].codes' for the current term (ignoring the last
-//         // element which stands for the Error component) and annotate any
-//         // factor involved ('codes[] == 1) which is of type "fixed". This
-//         // will be called the target factor. All candidate comparisons will
-//         // be stored in 'mcomps', an array of JSON objects that will hold
-//         // all the necessary information for processin an a_posteriori
-//         // multiple test
-//
-//         for (let i = 0, fl = factors.length; i < fl; i++ ) {
-//
-//           if ( ( terms[t].codes[i] === 1 ) && (factors[i].type === FIXED ) ) {
-//
-//             //console.log(t.toString() + ' ' + terms[t].name +
-//             //            ': ' + factors[i].name );
-//             //console.log(terms[t]);
-//
-//             // Identify the target factor for which we want to perform
-//             // multiple comparisons. Append the target factor to a list
-//             // to be provided to multiple comparison tests. For this, build
-//             // a JSON object ('tgt') that will hold all the information
-//             // necessary for the multiple test procedures for a given
-//             // target factor, be it a main factor or an interaction.
-//             // This will be appended to the 'mcomps' list
-//             //
-//             // tgt = {
-//             //   fcode      : i,
-//             //   fname      : factors[i].name
-//             //   term       : term name
-//             //   averages   : [],
-//             //   levels     : [],
-//             //   n          : [],
-//             //   df_against : 0,
-//             //   ms_against : 0,
-//             // }
-//             //
-//             // Note that 'tgt.factor' holds the code of the factor being
-//             // analyzed (i).
-//
-//             let tgt = { fcode: i };
-//
-//             // From this, we compute the real name of factor 'i'
-//             // and store it into 'tgt.name'.
-//
-//             tgt.fname = factors[i].name;
-//
-//             // Store the term's name for future reference.
-//
-//             tgt.term = terms[t].name;
-//
-//             // For some multiple tests the 'df' and the 'MS' of the term
-//             // used in the denominator of the F test for this particular
-//             // term ('term[t].against') is needed, so we pass it through
-//             // 'df_against' and 'ms_against'.
-//
-//             tgt.df_against = terms[terms[t].against].df;
-//             tgt.ms_against = terms[terms[t].against].MS;
-//
-//             // Now a list of averages to perform multiple comparisons is
-//             // necessary. These averages are the averages of the levels of
-//             // the 'tgt' factor. They will be passed in an array containing
-//             // the level 'name' (not its 'code'), the number of replicates
-//             //used to compute the average of each level, and the
-//             // corresponding variance. This is easy if the 'term' being
-//             // considered (t) corresponds to a main factor (which has
-//             // 'term[t].order' == 1) as all necessary values are stored in
-//             // 'terms' array ('average', 'n', 'sumx', 'sumx2', etc).
-//
-//             tgt.averages = [];
-//
-//             if( terms[t].order === 1 ) {
-//
-//               tgt.type = 'factor';
-//
-//               tgt.averages[tgt.term] = [];
-//
-//               // Go along all levels
-//
-//               for (let j = 0, jl = terms[t].average.length; j < jl; j++) {
-//
-//                 // Translate level name. Levels are stored as a string
-//                 // separated by ','. Transform the string into an array
-//                 // splitting by ','.
-//
-//                 let lv = terms[t].levels[j].split(',')[i];
-//
-//                 // The levels of the factor being considered ('i') are in
-//                 // the 'i'th position on the array.
-//
-//                 let ln = factors[i].levels[lv];
-//
-//                 // Get the 'average' and 'n' for this level
-//
-//                 let avg = terms[t].average[j];
-//                 let n = terms[t].n[j];
-//
-//                 // Compute Standard Deviation for later calculation
-//                 // of standard error
-//
-//                 let std = 0;
-//                 if( n > 1 ) {
-//                   std = terms[t].sumx2[j] - Math.pow(terms[t].sumx[j],2)/n;
-//                   std = std/(n-1);
-//                 }
-//
-//                 // Update the list of averages
-//
-//                 tgt.averages[tgt.term].push({level: ln,
-//                                              average: avg,
-//                                              n: n,
-//                                              std: std});
-//               }
-//
-//               // Reorder list of averages, from smallest to largest
-//
-//               tgt.averages[tgt.term].sort((a, b)=>(a.average>b.average)?1:-1);
-//
-//               // Push new target to the list of 'mcomps' for multiple
-//               // comparisons
-//
-//               mcomps.push(tgt);
-//
-//             } else {
-//
-//               // If the 'terms[t]' where the target factor is contained also
-//               // contains other factors, it's because it is an interaction
-//               // term. The computation of differences between averages is a
-//               // little bit more complicated, as it should be done
-//               // independently for all combinations of the levels of the
-//               // factors involved in the interaction with the exception of
-//               // the target term.
-//
-//               tgt.type = 'interaction';
-//
-//               for ( let j = 0, jl = terms[t].levels.length; j < jl; j++ ) {
-//
-//                 let levs = terms[t].levels[j].split(',');
-//
-//                 // Translate level name. Levels are stored as a string separated
-//                 // by ','. Transform the string into an array splitting by ','.
-//                 // The code for the current level of the target factor is in
-//                 // slot 'i'.
-//
-//                 let lv = levs[i];
-//
-//                 let ln = factors[i].levels[lv];
-//
-//                 for(let k = 0, kl = factors.length; k < kl; k++) {
-//                   if ( ( terms[t].codes[k] != 1 ) || (k == i) ) levs[k] = "-";
-//                 }
-//
-//                 // Get the 'average' and 'n' for this level
-//
-//                 let avg = terms[t].average[j];
-//                 let n = terms[t].n[j];
-//
-//                 // Compute Standard Deviation for later calculation
-//                 // of standard error
-//
-//                 let std = 0;
-//                 if( n > 1 ) {
-//                   std = terms[t].sumx2[j] - Math.pow(terms[t].sumx[j], 2)/n;
-//                   std = std/(n-1);
-//                 }
-//
-//                 // Stringify the 'codes' array which will be used as a key
-//                 // of an associative map for all combinations of levels
-//                 // excluding the target factor
-//
-//                 let codes = levs.join();
-//
-//                 let c = tgt.averages.hasOwnProperty(codes)?tgt.averages[codes]:-1;
-//                 if ( c == -1 )  tgt.averages[codes] = [];
-//                 tgt.averages[codes].push({level: ln,
-//                                           average: avg,
-//                                           n: n,
-//                                           std: std});
-//
-//                 // Reorder list of averages, from smallest to largest
-//
-//                 tgt.averages[codes].sort((a, b)=>(a.average>b.average)?1:-1);
-//               }
-//               mcomps.push(tgt);
-//             }
-//           }
-//         }
-//       }
-//     }
+    mcomps = [];
+
+    // Iterate through all 'terms' that are not the Residual (Error) or
+    // the Total terms (these two are easily identified because their
+    // attribute 'nlevels' = 0 and are in the end of the list of terms)
+
+    for(let term of terms ) {
+
+      console.log(term)
+
+      // Consider only those terms which have an F probability smaller than
+      // the rejection level specified (usually 0.05). Also, ignore
+      // interactions with more than three factors for simplicity
+      // (terms with 'order' > 3).
+
+      if( ( term.P < rejection_level ) && ( term.nlevels > 0 ) &&
+          ( term.order < 4 ) && ( term.against !== -1 ) ) {
+
+        // Consider only fixed factors or interactions containing fixed
+        // factors. Multiple tests are useless for random factors. Go along
+        // the array 'terms[].codes' for the current term (ignoring the last
+        // element which stands for the Error component) and annotate any
+        // factor involved ('codes[] == 1) which is of type "fixed". This
+        // will be called the target factor. All candidate comparisons will
+        // be stored in 'mcomps', an array of JSON objects that will hold
+        // all the necessary information for processin an a_posteriori
+        // multiple test
+
+        for (let i = 0, fl = factors.length; i < fl; i++ ) {
+
+          if ( ( term.codes[i] === 1 ) && (factors[i].type === FIXED ) ) {
+
+            //console.log(t.toString() + ' ' + term.name +
+            //            ': ' + factors[i].name );
+            //console.log(terms[t]);
+
+            // Identify the target factor for which we want to perform
+            // multiple comparisons. Append the target factor to a list
+            // to be provided to multiple comparison tests. For this, build
+            // a JSON object ('tgt') that will hold all the information
+            // necessary for the multiple test procedures for a given
+            // target factor, be it a main factor or an interaction.
+            // This will be appended to the 'mcomps' list
+            //
+            // tgt = {
+            //   fcode      : i,
+            //   fname      : factors[i].name
+            //   term       : term name
+            //   averages   : [],
+            //   levels     : [],
+            //   n          : [],
+            //   df_against : 0,
+            //   ms_against : 0,
+            // }
+            //
+            // Note that 'tgt.factor' holds the code of the factor being
+            // analyzed (i).
+
+            let tgt = { fcode: i };
+
+            // From this, we compute the real name of factor 'i'
+            // and store it into 'tgt.name'.
+
+            tgt.fname = factors[i].name;
+
+            // Store the term's name for future reference.
+
+            tgt.term = term.name;
+
+            // For some multiple tests the 'df' and the 'MS' of the term
+            // used in the denominator of the F test for this particular
+            // term ('term[t].against') is needed, so we pass it through
+            // 'df_against' and 'ms_against'.
+
+            tgt.df_against = terms[term.against].df;
+            tgt.ms_against = terms[term.against].MS;
+
+            // Now a list of averages to perform multiple comparisons is
+            // necessary. These averages are the averages of the levels of
+            // the 'tgt' factor. They will be passed in an array containing
+            // the level 'name' (not its 'code'), the number of replicates
+            //used to compute the average of each level, and the
+            // corresponding variance. This is easy if the 'term' being
+            // considered (t) corresponds to a main factor (which has
+            // 'term[t].order' == 1) as all necessary values are stored in
+            // 'terms' array ('average', 'n', 'sumx', 'sumx2', etc).
+
+            tgt.averages = [];
+
+            if( term.order === 1 ) {
+
+              tgt.type = 'factor';
+
+              tgt.averages[tgt.term] = [];
+
+              // Go along all levels
+
+              for (let j = 0, jl = term.average.length; j < jl; j++) {
+
+                // Translate level name. Levels are stored as a string
+                // separated by ','. Transform the string into an array
+                // splitting by ','.
+
+                let lv = term.levels[j].split(',')[i];
+
+                // The levels of the factor being considered ('i') are in
+                // the 'i'th position on the array.
+
+                let ln = factors[i].levels[lv];
+
+                // Get the 'average' and 'n' for this level
+
+                let avg = term.average[j];
+                let n = term.n[j];
+
+                // Compute Standard Deviation for later calculation
+                // of standard error
+
+                let std = 0;
+                if( n > 1 ) {
+                  std = term.sumx2[j] - Math.pow(term.sumx[j],2)/n;
+                  std = std/(n-1);
+                }
+
+                // Update the list of averages
+
+                tgt.averages[tgt.term].push({level: ln,
+                                             average: avg,
+                                             n: n,
+                                             std: std});
+              }
+
+              // Reorder list of averages, from smallest to largest
+
+              tgt.averages[tgt.term].sort((a, b)=>(a.average>b.average)?1:-1);
+
+              // Push new target to the list of 'mcomps' for multiple
+              // comparisons
+
+              mcomps.push(tgt);
+
+            } else {
+
+              // If the 'terms[t]' where the target factor is contained also
+              // contains other factors, it's because it is an interaction
+              // term. The computation of differences between averages is a
+              // little bit more complicated, as it should be done
+              // independently for all combinations of the levels of the
+              // factors involved in the interaction with the exception of
+              // the target term.
+
+              tgt.type = 'interaction';
+
+              for ( let j = 0, jl = term.levels.length; j < jl; j++ ) {
+
+                let levs = term.levels[j].split(',');
+
+                // Translate level name. Levels are stored as a string separated
+                // by ','. Transform the string into an array splitting by ','.
+                // The code for the current level of the target factor is in
+                // slot 'i'.
+
+                let lv = levs[i];
+
+                let ln = factors[i].levels[lv];
+
+                for(let k = 0, kl = factors.length; k < kl; k++) {
+                  if ( ( term.codes[k] != 1 ) || (k == i) ) levs[k] = "-";
+                }
+
+                // Get the 'average' and 'n' for this level
+
+                let avg = term.average[j];
+                let n = term.n[j];
+
+                // Compute Standard Deviation for later calculation
+                // of standard error
+
+                let std = 0;
+                if( n > 1 ) {
+                  std = term.sumx2[j] - Math.pow(term.sumx[j], 2)/n;
+                  std = std/(n-1);
+                }
+
+                // Stringify the 'codes' array which will be used as a key
+                // of an associative map for all combinations of levels
+                // excluding the target factor
+
+                let codes = levs.join();
+
+                let c = tgt.averages.hasOwnProperty(codes)?tgt.averages[codes]:-1;
+                if ( c == -1 )  tgt.averages[codes] = [];
+                tgt.averages[codes].push({level: ln,
+                                          average: avg,
+                                          n: n,
+                                          std: std});
+
+                // Reorder list of averages, from smallest to largest
+
+                tgt.averages[codes].sort((a, b)=>(a.average>b.average)?1:-1);
+              }
+              mcomps.push(tgt);
+            }
+          }
+        }
+      }
+    }
     
-    // We have scanned all terms. 'target' has a list of all possible
-    // comparisons!
+//     We have scanned all terms. 'target' has a list of all possible
+//     comparisons!
     
-    //console.log('mcomps: ',mcomps);
+    console.log('mcomps: ',mcomps);
   }
   
   
@@ -478,6 +483,9 @@ var anova = (function () {
 
   function buildTerms() { 
         
+    //#DEBUG
+    console.log('buildTerms() called');
+    //!DEBUG
 
     // Construct a list of 'terms' (denoting either main factors or
     // interactions) assuming that a fully orthogonal analysis is being done.
@@ -564,6 +572,10 @@ var anova = (function () {
     }
     
     
+    //#DEBUG
+    //console.table(terms)
+    displayTerms("Unsorted and uncorrected terms");
+    //!DEBUG
     
     // Compute the 'partials' list, i.e., a list with all terms potentially
     // included in an ANOVA.
@@ -601,18 +613,27 @@ var anova = (function () {
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
 
+      //#DEBUG
+      displayTerms( "List of Terms" );
+      //!DEBUG
 
       // Check if there are nested factors and correct the
       // ANOVA terms if necessary
 
       correctForNesting();
 
+      //#DEBUG
+      displayFactors();
+      //!DEBUG
 
       // Compute Cornfield-Tukey rules to determine
       // denominators for the F-tests
 
       computeCTRules();
 
+      //#DEBUG
+      displayTerms( "List of Corrected Terms" );
+      //!DEBUG
 
       // Display tables of averages per factor or combinations of factors
 
@@ -649,6 +670,9 @@ var anova = (function () {
 
   function computeCTRules() {
 
+    //#DEBUG
+    console.log('computeCTRules() called');
+    //!DEBUG
     
     // Build the table of multipliers for all terms
     // Skip the last two terms. The 'Total' is not necessary
@@ -852,6 +876,9 @@ var anova = (function () {
 
   function computeCells() {
 
+    //#DEBUG
+    console.log('computeCells() called');
+    //!DEBUG
 
     // Use 'maxn' to estimate the maximum number of replicates per cell.
     // In a balanced data set, all 'cells' will have the same number of
@@ -976,6 +1003,9 @@ var anova = (function () {
     
     replicates = data[0].n;
     
+    //#DEBUG
+    displayCells();
+    //!DEBUG
     
     // It's time to compute homogeneity tests for this data set
     //because most depend only on having information of averages and
@@ -1013,6 +1043,9 @@ var anova = (function () {
   function correctForNesting() {
 
 
+    //#DEBUG
+    console.log('correctForNesting() called');
+    //!DEBUG
 
     // No need to check for nesting if there is only one factor,
     // or if there is no hint on nested factors ('nested' == false).
@@ -1114,6 +1147,10 @@ var anova = (function () {
       current++;  
     }
     
+    //#DEBUG    
+    displayFactors( factors );
+    displayTerms('Terms before correcting for nesting', terms);
+    //!DEBUG
     
     correctTermNames();
 
@@ -1147,6 +1184,9 @@ var anova = (function () {
   
   function correctTermNames() {
 
+    //#DEBUG
+    console.log('correctTermNames() called');
+    //!DEBUG
       
     // For factors that are nested into others, correct the nesting depth
     // (number of factors where it is nested into, i.e. number of 'nestedin'
@@ -1281,6 +1321,9 @@ var anova = (function () {
   
   function displayANOVA() {
 
+    //#DEBUG
+    console.log('displayANOVA() called');
+    //!DEBUG
 
     let text = '<div class="ct"><table>' +
                '<thead><tr><th>Source</th><th>SS</th><th>df</th>' +
@@ -1340,6 +1383,9 @@ var anova = (function () {
   
   function displayAverages() {
 
+    //#DEBUG
+    console.log('displayAverages() called');
+    //!DEBUG
         
     let d = document.getElementById('averages'); 
     
@@ -1401,33 +1447,58 @@ var anova = (function () {
   
   function displayCTRules( ) {
 
+    //#DEBUG
+    console.log('displayCTRules() called');
+    //!DEBUG
     
     let c = document.getElementById('ctrules'); 
 
+    //#DEBUG
+    let d = document.getElementById('debug');
+    //!DEBUG
     
     let table = '<div class="ct"><table><thead>';
 
+    //#DEBUG
+    let dbgtable = '<h5>Cornfield-Tukey Rules</h5>' + table;
+    //!DEBUG
 
     // Build the header of the table. First column for the ANOVA term name
 
     table += '<tr><th>Term</th>';
 
+    //#DEBUG
+    dbgtable += '<tr><th>Term</th>';
+    //!DEBUG
 
     // Now add one column for each subscript associated with each factor,
     // plus one column for the Error. This is the CT table of multipliers,
     // and its display is just for debugging purposes
 
+    //#DEBUG
+    for ( let i = 0, len = factors.length + 1; i < len; i++) {
+      dbgtable += '<th>' + String.fromCharCode(i+105) + '</th>';
+    }
+    //!DEBUG
 
     // We should build a table with as many columns as ANOVA terms (including
     // the Error term) which will display the components of variance measured
     // by each term. Again, displaying this is only necessary while debugging
 
+    //#DEBUG
+    for ( let i = terms.length - 2; i >= 0; i--) {
+      dbgtable += '<th>' + terms[i].name + '</th>';
+    }
+    //!DEBUG
 
     // Finally a column to display which variance components are estimated
     // by each term
 
     table += '<th>Estimates</th></tr></thead><tbody>';
 
+    //#DEBUG
+    dbgtable += '<th>Estimates</th></tr></thead><tbody>';
+    //!DEBUG
     
     // Compute CT rows. If DEBUG is set the table is more complex than
     // for regular operation, where we need only the factor or interaction
@@ -1477,6 +1548,17 @@ var anova = (function () {
 
       table += '<tr><td>' + terms[i].name + '</td>';
       
+      //#DEBUG
+      dbgtable += '<tr><td>' + terms[i].name + '</td>';
+      
+      for ( let j = 0, len = factors.length +1; j < len; j++) {
+        dbgtable += '<td>' + terms[i].ct_codes[j].toString() + '</td>';
+      }    
+      for ( let j = terms.length - 2; j >= 0; j--) {
+        dbgtable += '<td>' + terms[i].varcomp[j].toString() + '</td>';  
+      }
+
+      //!DEBUG
       let components = [], name = '', vc = '&sigma', compname = '', maincomp='';
 
       // Start in the Error term ( index terms.length-2 ) and go upwards
@@ -1498,13 +1580,22 @@ var anova = (function () {
 
       table += '<td>' + components.join(' + ') + '</td></tr>';
       
+      //#DEBUG
+      dbgtable += '<td>' + components.join(' + ') + '</td></tr>';
+      //!DEBUG
     }
     
     table += '</tbody></table></div>';
     
+    //#DEBUG
+    dbgtable += '</tbody></table></div>';
+    //!DEBUG
     
     c.innerHTML = table;
     
+    //#DEBUG
+    d.innerHTML += dbgtable;
+    //!DEBUG
   } 
   /****************************************************************************/
   /*                                                                          */
@@ -1519,6 +1610,47 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
   
+  //#DEBUG
+  function displayCells() {
+
+    console.log('displayCells() called');
+
+    let d = document.getElementById('debug'); 
+    
+    let table = '<h5>List of Partials</h5><div><table><thead>';
+    
+    table += '<tr>';
+    for(let i = 0, len = factors.length; i < len; i++ ) {
+      table += '<th>' + factors[i].name + '</th>';
+    }
+    
+    table += '<th>n orig.</th><th>n</th><th>sumx</th>' +
+             '<th>sumx2</th><th>ss</th></thead><tbody>';
+    
+    for(let i = 0, len = data.length; i < len; i++ ) {
+      table += '<tr>';
+      for(let j = 0, l = data[i].codes.length; j < l; j++ ) {
+        let c = data[i].codes[j];
+        let name = factors[j].levels[c];
+        table += '<td>' + name + '</td>';
+      }
+      table += '<td>' + data[i].n_orig.toString() + '</td>';
+      table += '<td>' + data[i].n.toString() + '</td>';
+      table += '<td>' + data[i].sumx.toString() + '</td>';
+      table += '<td>' + data[i].sumx2.toString() + '</td>';
+      table += '<td>' + data[i].ss.toString() + '</td>';
+      table += '</tr>';
+    }
+
+    table += "</tbody></table></div>";
+
+    table += '<h5>Replicates</h5><div class="contentor"><table><thead>';
+    table += '<tr><td>Replicates</td></tr></thead><tbody><tr><td>';
+    table += replicates + '</td></tr></tnody></table></div>';
+    
+    d.innerHTML += table;
+  }
+  //!DEBUG
 
   /****************************************************************************/
   /*                                                                          */
@@ -1530,6 +1662,9 @@ var anova = (function () {
 
   function displayData() {
 
+    //#DEBUG
+    console.log('displayData() called');
+    //!DEBUG
     
     let tb = document.getElementById('datatab');
 
@@ -1583,6 +1718,9 @@ var anova = (function () {
 
   function displayDataTable() {
 
+    //#DEBUG
+    console.log('displayDataTable() called');
+    //!DEBUG
 
     let tb = document.getElementById( 'datatable' );
 
@@ -1635,6 +1773,50 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
+  //#DEBUG
+
+
+  function displayFactors() {
+
+    console.log('displayFactors() called');
+
+    // Get the 'anova_debug' <div> to append data
+    
+    let d = document.getElementById('debug'); 
+    
+    // Create the table as a whole text bunch of HTML to avoid
+    // multiple calls to the DOM structure
+  
+    let table = '<h5>Factors</h5><div><table>';
+    
+    // Append the header
+    
+    table += '<thead><tr><th>Name</th><th>Subs.</th>' +
+             '<th>Type</th><th>Levels</th><th>Levels\' Codes</th>' +
+             '<th>Nested in</th></tr></thead><tbody>';
+    
+    // Append rows. Th subscript for the current factor
+    // starting in 'i' (the first factor) is given by the
+    // formula 'factor index' + 105. The first factor has index = 0
+    // so the ASCII charcode 105 is equivalent to 'i'. The second
+    // factor 'i = 1' has charcode 106 which is equivalent to 'j',
+    // and so on...
+    
+    for(let i = 0, len = factors.length; i < len; i++ ) {
+      table += '<tr><td>' + factors[i].name + '</td>' +
+               '<td>' + String.fromCharCode(i+105) + '</td>' +
+               '<td>' + factors[i].type + '</td>' +
+               '<td>' + factors[i].nlevels.toString() + '</td>' +
+               '<td>' + factors[i].levels.toString(); + '</td>' +
+               '<td>' + factors[i].nestedin.toString(); + '</td></tr>';
+    }
+    
+    table += '</tbody></table><div>';
+    
+    d.innerHTML += table;
+
+  }
+  //!DEBUG
   /****************************************************************************/
   /*                                                                          */
   /*                        displayMultipleComparisons                        */
@@ -1647,6 +1829,9 @@ var anova = (function () {
   
   function displayMultipleComparisons() {
 
+    //#DEBUG
+    console.log('displayMultipleComparisons() called');
+    //!DEBUG
         
     let d = document.getElementById('mtests'); 
     
@@ -1681,6 +1866,61 @@ var anova = (function () {
   /*                                                                             */
   /*******************************************************************************/
   
+  //#DEBUG
+  function displayTerms( title = '') {
+
+    console.log('displayTerms() called');
+
+    let d = document.getElementById('debug'); 
+    
+    let table = '<h5>' + title + '</h5><table>';
+    
+    // Build the table header
+    
+    table += '<thead><tr><th>idx</th><th>Order</th><th>Name</th>' +
+             '<th>Type</th><th>Codes</th><th>levels</th><th>combins</th>' +
+             '<th>df</th><th>level codes</th><th>n</th><th>averages</th>' +
+             '<th>sumx</th><th>sumx2</th><th>ss</th><th>SS</th>' +
+             '<th>MS</th><th>F</th><th>Against</th></tr></thead><tbody>';
+    
+    let a  = [];
+    let tp = '';
+
+    for(let i = 0, len = terms.length; i < len; i++ ) {
+      table += '<tr><td>' + terms[i].idx.toString() + '</td>';
+      table += '<td>'+terms[i].order.toString()+'</td>';
+      table += '<td>'+terms[i].name+'</td>';
+      //table += '<td></td>';
+
+      (terms[i].type===RANDOM)?tp='RANDOM':tp='FIXED';
+      table += '<td>' + tp + '</td>';
+      table += '<td>' + terms[i].codes.toString(); + '</td>';
+      table += '<td>' + terms[i].nlevels.toString() + '</td>';
+      table += '<td>' + terms[i].combins.toString() + '</td>';
+      table += '<td>' + terms[i].df.toString() + '</td>';
+      a = terms[i].levels.slice();
+      table += '<td>' + a.join(' : ') + '</td>';
+      a = terms[i].n.slice();
+      table += '<td>' + a.join(' : ') + '</td>';
+      a = terms[i].average.slice();
+      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
+      table += '<td>' + a.join(' : ') + '</td>';
+      a = terms[i].sumx.slice();
+      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
+      table += '<td>' + a.join(' : ') + '</td>';
+      a = terms[i].sumx2.slice();
+      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
+      table += '<td>' + a.join(' : ') + '</td>';
+      table += '<td>' + terms[i].ss.toFixed(3) + '</td>';
+      table += '<td>' + terms[i].SS.toFixed(3) + '</td>';
+      table += '<td>' + terms[i].MS.toFixed(3) + '</td>';
+      table += '<td>' + terms[i].F.toFixed(3) + '</td>';
+      table += '<td>' + terms[i].against + '</td>';
+    }
+    table +='</tbody></table>';
+    d.innerHTML += table;
+  }
+  //!DEBUG
   
   /****************************************************************************/
   /*                                                                          */
@@ -1694,6 +1934,9 @@ var anova = (function () {
  
   function getCellsSS() {
 
+    //#DEBUG
+    console.log('getCellsSS() called');
+    //!DEBUG
     
     // We will use these two lengths a lot, so cache them
     
@@ -1898,6 +2141,10 @@ var anova = (function () {
                
     terms.push(tt);    
     
+//#DEBUG    
+    //console.log("Table of Terms")
+    //console.table(terms)
+//!DEBUG
     
     return true;
   }   
@@ -1912,6 +2159,9 @@ var anova = (function () {
 
   function homogeneityTests() {
 
+    //#DEBUG
+    console.log('homogeneityTests() called');
+    //!DEBUG
 
     let d = document.getElementById('homogen');
 
@@ -2307,6 +2557,8 @@ var anova = (function () {
   }
 
 
+
+
   function studentizedComparisons(test, fact, df, ms, avgs) {
     //console.log(avgs)  
     let t = "";
@@ -2504,6 +2756,9 @@ var anova = (function () {
 
   function openDataFile() {
 
+    //#DEBUG
+    console.log('openDataFile() called');
+    //!DEBUG
       
     // Grab the file object
     
@@ -2578,7 +2833,7 @@ var anova = (function () {
                 // otherwise they are of type 'FIXED'
 
                 
-                if( name.endsWith( "*" ) ) {
+                if( name.endsWith( '*' ) ) {
                   factors[j].type = RANDOM;
                   name = name.slice( 0, name.length-1 );
                 } else {
@@ -2590,14 +2845,6 @@ var anova = (function () {
                 factors[j].levels = [];
                 factors[j].nestedin = new Array( nfactors ).fill(0);
                 factors[j].depth = 0;
-                
-
-                // Compute the subscript for the current factor
-                // starting in 'i' (the first factor) which has
-                // ASCII charcode 105. This will be needed in
-                // the CT Rules procedure later on...
-                
-                factors[j].subscript = String.fromCharCode( j + 105 );
               }   
               
               // The header was read. All subsequent lines will be
@@ -2758,6 +3005,9 @@ var anova = (function () {
           elem[i].innerHTML="";
         }
         
+        //#DEBUG - Display Table of Factors 
+        displayFactors();
+        //!DEBUG
         
         displayData();
         
@@ -3164,6 +3414,9 @@ var anova = (function () {
 
   function resetAnalysis() {
 
+    //#DEBUG
+    console.log('resetAnalysis() called');
+    //!DEBUG
 
     // Clear results in all <divs> of class 'anovaTabContents' which are
     // children of <div id='anova'>
@@ -3194,8 +3447,8 @@ var anova = (function () {
   
   /*************************************************************************/
   /*                                                                       */
-  /* Here, we export several functions that allow us to interacting with   */
-  /* the anova object, keeping its internals hidden from the standard user */
+  /* Here, we export several functions that allow us to interact with the  */
+  /* anova object, keeping its internals hidden from the standard user     */
   /*                                                                       */
   /*************************************************************************/
   
@@ -3245,6 +3498,26 @@ function selectTab(name) {
 document.addEventListener('DOMContentLoaded', function () {
 
 
+  //#DEBUG
+
+  // Append 'debug' tab and corresponding <a href> if in Debug Mode
+
+  let t = document.getElementById('tab-contents');
+  let d = document.createElement('div');
+  d.className = 'tabcontent';
+  d.id = 'debug';
+  t.appendChild(d);
+
+  t = document.getElementById('tabs');
+  d = document.createElement('a');
+  d.name = 'debug';
+  d.className = 'tabs';
+  d.href = '#!';
+  d.onclick = function () { selectTab('debug'); };
+  d.innerHTML = 'Debug';
+  t.appendChild(d);
+
+  //!DEBUG
 
 
   anova.setSettings();

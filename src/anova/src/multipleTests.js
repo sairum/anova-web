@@ -1,4 +1,6 @@
 
+
+
   function studentizedComparisons(test, fact, df, ms, avgs) {
     //console.log(avgs)  
     let t = "";

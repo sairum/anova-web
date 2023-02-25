@@ -42,49 +42,49 @@ The *src/* directory is not necessary unless you intend to modify or improve the
 
 Another way to run **anova-web** is to uncompress or clone this github repository somewhere in the directory tree of a personal computer. Then, using a GUI, click on *index.html*. This should run the whole bundle just fine (at least it does on a Linux system running KDE Plasma 5). 
 
-### General structure of the program
+### General flow of the program
 ```
-tructure of the program
-
 openDataFile()
  │
- ├ resetAnalysis()
+ ├── resetAnalysis()
  │
- ├ DEBUG: displayFactors()
+ ├── DEBUG: displayFactors()
  │
- ├ displayData()
+ ├── displayData()
  │
- └ computeCells()
-     │
-     ├ DEBUG: displayCells()
-     │
-     ├ homogeneityTests()
-     │
-     └ buildTerms()
-         │
-         └ getCellsSS()
+ └── computeCells()
+       │
+       ├── DEBUG: displayCells()
+       │
+       ├── homogeneityTests()
+       │
+       └── buildTerms()
              │
-             ├ DEBUG: displayTerms()
-             │
-             ├ correctForNesting()
-             │   │
-             │   └ correctTermNames()
-             │
-             ├ DEBUG: displayFactors()
-             │
-             ├ computeCTRules()
-             │    │
-             │    └ displayCTRules()
-             │
-             ├ DEBUG: displayTerms()
-             │
-             ├ displayAverages()
-             │
-             ├ buildMultipleComparisons()
-             │
-             ├ displayMultipleComparisons()
-             │
-             └ displayANOVA()
+             └── IF ── getCellsSS()
+                  │
+                  ├── DEBUG: displayTerms()
+                  │
+                  ├── correctForNesting()
+                  │     │
+                  │     └ correctTermNames()
+                  │
+                  ├── DEBUG: displayFactors()
+                  │
+                  ├── computeCTRules()
+                  │     │
+                  │     └ displayCTRules()
+                  │
+                  ├── DEBUG: displayTerms()
+                  │
+                  ├── displayAverages()
+                  │
+                  ├── buildMultipleComparisons()
+                  │
+                  ├── displayMultipleComparisons()
+                  │     │
+                  │     └── multipleTests()
+                  │
+                  └── displayANOVA()
 ```
  
 

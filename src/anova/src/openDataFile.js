@@ -88,7 +88,7 @@
                 // otherwise they are of type 'FIXED'
 
                 
-                if( name.endsWith( "*" ) ) {
+                if( name.endsWith( '*' ) ) {
                   factors[j].type = RANDOM;
                   name = name.slice( 0, name.length-1 );
                 } else {
@@ -100,14 +100,6 @@
                 factors[j].levels = [];
                 factors[j].nestedin = new Array( nfactors ).fill(0);
                 factors[j].depth = 0;
-                
-
-                // Compute the subscript for the current factor
-                // starting in 'i' (the first factor) which has
-                // ASCII charcode 105. This will be needed in
-                // the CT Rules procedure later on...
-                
-                factors[j].subscript = String.fromCharCode( j + 105 );
               }   
               
               // The header was read. All subsequent lines will be
