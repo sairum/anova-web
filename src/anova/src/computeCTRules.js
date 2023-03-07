@@ -15,7 +15,7 @@
   function computeCTRules() {
 
     //#DEBUG
-    console.log('computeCTRules() called');
+    //console.log('computeCTRules() called');
     //!DEBUG
     
     // Build the table of multipliers for all terms

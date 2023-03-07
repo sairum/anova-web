@@ -21,7 +21,7 @@
 
 
     //#DEBUG
-    console.log('correctForNesting() called');
+    //console.log('correctForNesting() called');
     //!DEBUG
 
     // No need to check for nesting if there is only one factor,
@@ -65,7 +65,7 @@
                 
               // In the current term, we set the code's column 'k' to 2 (two)
               // to denote that factor 'k' nests a factor involved in this
-              // term. Thre may be multiple 'k's if the 'current' term
+              // term. There may be multiple 'k's if the 'current' term
               // involves a factor nested in an interaction between two or
               // more factors. This notation will come in handy to compute
               // Cornfield-Tukey Rules later on
@@ -85,7 +85,9 @@
                   
                 factors[current].nestedin[k] = 1;
                 factors[current].type = RANDOM;
-                
+                factors[current].name = '<span class="random">' +
+                                      factors[current].orig_name + '</span>';
+
                 // correcting levels of this term will be done later during
                 // the correction of term's names
                 

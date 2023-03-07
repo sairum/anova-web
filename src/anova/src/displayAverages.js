@@ -13,7 +13,7 @@
   function displayAverages() {
 
     //#DEBUG
-    console.log('displayAverages() called');
+    //console.log('displayAverages() called');
     //!DEBUG
         
     let d = document.getElementById('averages'); 
@@ -22,6 +22,8 @@
     // multiple calls to the DOM structure
   
     let table = '';
+
+    let fmt = {minimumFractionDigits: DPL};
     
     for(let i = 0, len = terms.length - 2; i < len; i++ ) {
        
@@ -46,9 +48,11 @@
             table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
           }  
         }
-        table += '<td>' + terms[i].average[j].toFixed(DPL) + '</td>';
-        let n = parseInt(terms[i].n[j]);
-        table += '<td>' + n.toFixed(DPL) + '</td>';
+        table += '<td class="flt">' +
+                 terms[i].average[j].toLocaleString(undefined,fmt) +
+                 '</td>';
+        let n = terms[i].n[j];
+        table += '<td>' + n.toString() + '</td>';
         
         let std = 0, variance = 0;
         if( n > 1 ) {
@@ -57,8 +61,10 @@
           std = Math.sqrt(variance,2);
         }
         
-        table += '<td>' + std.toFixed(DPL) + '</td>';
-        table += '<td>' + variance.toFixed(DPL) + '</td>';
+        table += '<td class="flt">' +
+                 std.toLocaleString(undefined,fmt) + '</td>';
+        table += '<td class="flt">' +
+                 variance.toLocaleString(undefined,fmt) + '</td>';
         table += '</tr>'; 
       } 
       table += '</tbody></table>';

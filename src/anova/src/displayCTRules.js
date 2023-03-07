@@ -9,7 +9,7 @@
   function displayCTRules( ) {
 
     //#DEBUG
-    console.log('displayCTRules() called');
+    //console.log('displayCTRules() called');
     //!DEBUG
     
     let c = document.getElementById('ctrules'); 
@@ -120,14 +120,17 @@
       }
 
       //!DEBUG
-      let components = [], name = '', vc = '&sigma', compname = '', maincomp='';
+      let components = [], name = '', vc = '&sigma',
+          compname   = '', maincomp='';
 
       // Start in the Error term ( index terms.length-2 ) and go upwards
       // until term 0 (first main factor)
 
       for ( let j = terms.length - 2; j >= 0; j--) {
         if( terms[i].varcomp[j] > 0 ) {
-          if( ( terms[j].name === 'Error' ) || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
+          // The 'Error' or 'Residual' terms have no levels, hence the
+          // attribute 'nlevels' set to 0
+          if ( terms[j].nlevels === 0 ) name = '&epsilon;';
           else name = terms[j].name;
           if( terms[j].type === RANDOM ) vc = '&sigma;';
           else vc = '&Sigma;';
@@ -146,7 +149,9 @@
       //!DEBUG
     }
     
-    table += '</tbody></table></div>';
+    table += '</tbody></table><p style="font-size: 12px;">' +
+            'Note: Random factors are displayed in <span class="random">' +
+            'Serif</span> font</p></div>';
     
     //#DEBUG
     dbgtable += '</tbody></table></div>';

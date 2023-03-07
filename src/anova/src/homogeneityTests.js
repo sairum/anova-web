@@ -1,6 +1,6 @@
   /****************************************************************************/
   /*                                                                          */
-  /*                 Computation of homoscedasticity tests                    */
+  /*                              homogeneityTests                            */
   /*                                                                          */
   /*    So far, only Cochran's C and Bartlett's tests are implemented.        */
   /*                                                                          */
@@ -9,7 +9,7 @@
   function homogeneityTests() {
 
     //#DEBUG
-    console.log('homogeneityTests() called');
+    //console.log('homogeneityTests() called');
     //!DEBUG
 
     let d = document.getElementById('homogen');
@@ -32,6 +32,8 @@
   /****************************************************************************/
 
   function testBartlett() {
+
+    let fmt = {minimumFractionDigits: DPL};
       
     // Compute Bartlett's test
     //
@@ -114,11 +116,13 @@
     if( prob < 0 ) prob = 0;
      
     let result = '';
-    result += '<p>&#120594;<sup>2</sup> = ' + bartlett_k.toFixed(DPL) + '</p>' +
+    result += '<p>&#120594;<sup>2</sup> = ' +
+              bartlett_k.toLocaleString( undefined, fmt ) + '</p>' +
               '<p>for <b><i>k</i> = ' + k.toString() +
               '</b> averages and <b>&nu; = ' + (k-1).toString() +
               '</b> degrees of freedom: <b>' +
-              '</b></p><p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+              '</b></p><p>P = ' + prob.toLocaleString( undefined, fmt ) +
+              '</p>';
     
     return result;
     
@@ -133,6 +137,8 @@
 
 
   function testCochran() {
+
+    let fmt = {minimumFractionDigits: DPL};
       
     // Compute Cochran's C test which is a ratio between the largest sample
     // variance over the sum of all sample variances. 'maxvar' will hold
@@ -190,11 +196,12 @@
     //P = jStat.centralF.cdf(f, df * (k - 1.0), df) * k;
 
     let result = '';
-    result += '<p>C = ' + cochran_C.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + k.toString() +
+    result += '<p>C = ' + cochran_C.toLocaleString( undefined, fmt ) +
+              '</p><p>for <b><i>k</i> = ' + k.toString() +
               '</b> averages and <b>&nu; = ' + df.toString() +
               '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+              '<p>P = ' + prob.toLocaleString( undefined, fmt ) +
+              '</p>';
     
     // Because of the problems mentioned above, and the fact that there is not
     // a true CDF function for Cochran's C, we also provide critical values
@@ -215,16 +222,19 @@
     cv05 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.05/k, df, df*(k-1))));
     cv01 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.01/k, df, df*(k-1))));
     
-    result += "<p>Critical values of C for</p>";
-    result += "<p>&alpha; = <i>0.10</i> &xrarr; " + cv10.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv10 ? "heterogeneous":"homogeneous");
-    result += "</p>";
-    result += "<p>&alpha; = <i>0.05</i> &xrarr; " + cv05.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv05 ? "heterogeneous":"homogeneous");
-    result += "</p>";
-    result += "<p>&alpha; = <i>0.01</i> &xrarr; " + cv01.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv01 ? "heterogeneous":"homogeneous");
-    result += "</p>";
+    result += '<p>Critical values of C for</p>' +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
 
     return result;
     
@@ -239,6 +249,8 @@
 
 
   function testLevene() {
+
+    let fmt = { minimumFractionDigits: DPL };
 
     // The Levene's W test is
     //
@@ -319,10 +331,11 @@
     let prob = 1 - jStat.centralF.cdf( levene, k - 1, N - k );
 
     let result = '';
-    result += '<p>F = ' + levene.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
-              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+    result += '<p>F = ' + levene.toLocaleString( undefined, fmt ) + '</p>' +
+              '<p>for <b><i>k</i> = ' + (k-1).toString() +
+              '</b> groups and <b>&nu; = ' + (N-k).toString() +
+              '</b> degrees of freedom</p><p>P = ' +
+              prob.toLocaleString( undefined, fmt ) + '</p>';
 
     let cv10 = 0;
     let cv05 = 0;
@@ -333,13 +346,16 @@
     cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
 
     result += '<p>Critical values for</p>' +
-              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
 
@@ -376,30 +392,39 @@
 
     prob = 1 - jStat.centralF.cdf( brown_forsythe, k - 1, N - k );
 
-    result += '<h2>Brown-Forsythe\'s test</h2>' +
-              '<p>F = ' + brown_forsythe.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
-              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+    result += '<h2>Brown-Forsythe\'s test (with medians)</h2>' +
+              '<p>F = ' + brown_forsythe.toLocaleString( undefined, fmt ) +
+              '</p><p>for <b><i>k</i> = ' + (k-1).toString() +
+              '</b> groups and <b>&nu; = ' + (N-k).toString() +
+              '</b> degrees of freedom</p><p>P = ' +
+              prob.toLocaleString( undefined, fmt ) + '</p>';
 
-    cv10 = 0;
-    cv05 = 0;
-    cv01 = 0;
-
-    cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
-    cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
-    cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+    //
+    // cv10 = 0;
+    // cv05 = 0;
+    // cv01 = 0;
+    //
+    // cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
+    // cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
+    // cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+    //
+    // We don't need to compute the above quantities as they are
+    // the same as for the Levene's test with means.
 
     result += '<p>Critical values for</p>' +
-              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              (brown_forsythe > cv10 ? 'heterogeneous':'homogeneous') +
+              '</p><p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              (brown_forsythe > cv05 ? 'heterogeneous':'homogeneous') +
+              '</p><p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
+              (brown_forsythe > cv01 ? 'heterogeneous':'homogeneous') +
+              '</p>';
 
     return result;
 

@@ -12,7 +12,7 @@
   function getCellsSS() {
 
     //#DEBUG
-    console.log('getCellsSS() called');
+    //console.log('getCellsSS() called');
     //!DEBUG
     
     // We will use these two lengths a lot, so cache them
@@ -107,7 +107,7 @@
       // Change the name of the "Error" to "Residual" if there are
       // nested factors
       
-      if( nesting ) residual.name = 'Residual';
+      if( nesting ) residual.name = '<span class="random">Residual</span>';
       
       // Now, for this particular term, check if the replicates ('n') for all
       // levels or level combinations are similar. If not, the analysis is
@@ -201,7 +201,7 @@
      * and the Total, with their respective sums of squares and dfs
      */
     
-    let te = { idx: tl, name: residual.name,
+    let te = { idx: tl+1, name: residual.name,
                codes: new Array(nfactors+1).fill(1),
                order: terms[tl-1].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: residual.df,
@@ -210,7 +210,7 @@
                
     terms.push(te);
     
-    let tt = { idx: tl+1, name: 'Total', codes: new Array(nfactors+1).fill(1),
+    let tt = { idx: tl+2, name: 'Total', codes: new Array(nfactors+1).fill(1),
                order: terms[tl].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: total.df,
                SS: total.ss, ct_codes: [], varcomp: [], MS: 0, P: 0,

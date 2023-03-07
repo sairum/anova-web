@@ -68,7 +68,7 @@
   function computeCells() {
 
     //#DEBUG
-    console.log('computeCells() called');
+    //console.log('computeCells() called');
     //!DEBUG
 
     // Use 'maxn' to estimate the maximum number of replicates per cell.
@@ -205,9 +205,13 @@
     //information!
     
     homogeneityTests();
-    
+
+    // Setup the are where Post Hoc tests are displayed
+
+    setupPostHocTests();
+
     // Compute the terms of the linear model
-    
+
     buildTerms();
 
   }

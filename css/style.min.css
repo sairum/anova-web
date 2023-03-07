@@ -8,4 +8,5 @@ table{border-collapse:collapse;}
 table,th,td{border:1px solid#ccc;}
 td,th{padding:5px 10px 5px 10px;}.flt{text-align:right;}
 tr:nth-child(even){background-color:#f2f2f2;}
-thead,th{background-color:#222222;color:#ffffff;}.accordion{background-color:white;cursor:pointer;padding:18px;width:100%;text-align:left;border:1px solid black;outline:none;transition:0.4s;}.active,.accordion:hover{background-color:#ccc;}.panel{padding:0 18px;background-color:white;display:none;overflow:hidden;border:2px solid black;}.right{float:right;margin:0px 5px 0px 5px;}.ctcomp{text-decoration:bold;color:red;}
+thead,th{background-color:#222222;color:#ffffff;}.accordion{background-color:white;cursor:pointer;padding:18px;width:100%;text-align:left;border:1px solid black;outline:none;transition:0.4s;}.active,.accordion:hover{background-color:#ccc;}.panel{padding:0 18px;background-color:white;display:none;overflow:hidden;border:2px solid black;}
+button{background-color:#EFEFEF;}.right{float:right;margin:0px 5px 0px 5px;}.ctcomp{color:red;}.random{font-style:italic;font-family:Georgia,Times,serif;}

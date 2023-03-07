@@ -31,6 +31,12 @@
     // multiple tests may also have to be run again...
      
     displayANOVA();
+
+    // We have to redo multiple comparisons because changing the rejection
+    // level may have created new significant tests or may have rendered
+    // previously significant tests not significant
+
+    buildPostHocTests();
     
   }
 
@@ -55,8 +61,6 @@
       if ( mt_rejection_level != NaN) {
         if(rejection_level > 1) rejection_level = 0.9999999;
         if(rejection_level < 0) rejection_level = 0.0000001;
-
-        console.log(mt_rejection_level)
 
         // We should redisplay the ANOVA table as some of the
         // terms may now be statistically significant. Moreover,
@@ -89,16 +93,20 @@
     if ( ignoreinteractions === false ) ignoreinteractions = true;
     else ignoreinteractions = false;
 
+    // In any case we should redo Post Hoc tests!
+
+    buildPostHocTests();
+
   }
 
   /*************************************************************************/
   /*                                                                       */
   /*                             useAlpha                                  */
   /*                                                                       */
-  /*  Use a rejection criterium (alpha) to establish if a given p-value is */
+  /*  Use a rejection criterion (alpha) to establish if a given p-value is */
   /*  "statistically significant" or not. If checked, the p-values will be */
   /*  displayed in bold and emphasized font whenever they are lower than   */
-  /*  the criterium defined below                                          */
+  /*  the criterion defined below                                          */
   /*                                                                       */
   /*************************************************************************/
 
@@ -159,7 +167,7 @@
   function resetAnalysis() {
 
     //#DEBUG
-    console.log('resetAnalysis() called');
+    //console.log('resetAnalysis() called');
     //!DEBUG
 
     // Clear results in all <divs> of class 'anovaTabContents' which are
@@ -187,4 +195,24 @@
   }
 
 
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             setPrecision                              */
+  /*                                                                       */
+  /* This function sets/changes the number of decimal places of numbers in */
+  /* most of the tables.                                                    */
+  /*                                                                       */
+  /*************************************************************************/
 
+  function setPrecision() {
+    DPL = parseFloat(document.getElementById('precision').value);
+    if( DPL < 2 ) DPL = 2;
+    if( DPL > 8 ) DPL = 8;
+
+    // We should redisplay the ANOVA table as some of the
+    // terms may now be statistically significant. Moreover,
+    // multiple tests may also have to be run again...
+
+    displayANOVA();
+
+  }

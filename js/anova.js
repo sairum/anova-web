@@ -10,7 +10,7 @@ var anova = (function () {
 
   var filename= '';
 
-  const DPL  = 5; // Number of decimal places
+  var DPL  = 4; // Number of decimal places
 
   // Define these two constants which denote factor types. The choice of 0
   // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
@@ -213,8 +213,8 @@ var anova = (function () {
   // default rejection level (alpha)
   const DEFAULT_REJECTION_LEVEL = 0.05;
 
-  // Use a rejection criterium (alpha)
-  var alpha = false;
+  // Use a rejection criterion (alpha)
+  var alpha = true;
 
   // set default rejection level for ANOVA F tests
   var rejection_level = DEFAULT_REJECTION_LEVEL;
@@ -231,24 +231,22 @@ var anova = (function () {
 
 
 
+
+
   /****************************************************************************/
   /*                                                                          */
-  /*           Compute a list of a posteriori muliple comparisons             */
+  /*                               buildPostHocTests                          */
   /*                                                                          */
   /* Check for terms that display significant F-statistics (differences       */
   /* between averages of a fixed factor). For the sake of simplicity restrict */
-  /* a posteriori tests to terms denoting up to second order interactions     */
-  /* (that is, involving trhee factors). The list is called 'mcomps' and will */
-  /* be fed to a function that actually preforms a posteriori multiple        */
-  /* comparison tests.                                                        */
+  /* post hoc tests to terms involving no more than three factors, that is    */
+  /* second order interactions (A*B*C). The list is called 'mcomps' and will  */
+  /* be fed to a function that computes the actual Post Hoc tests             */
   /*                                                                          */
   /****************************************************************************/
    
-  function buildMultipleComparisons() {
+  function buildPostHocTests() {
 
-    //#DEBUG
-    console.log('buildMultipleComparisons() called');
-    //!DEBUG
     
     //console.log(terms)
       
@@ -256,16 +254,15 @@ var anova = (function () {
 
     // Iterate through all 'terms' that are not the Residual (Error) or
     // the Total terms (these two are easily identified because their
-    // attribute 'nlevels' = 0 and are in the end of the list of terms)
+    // attribute 'nlevels' is 0 and are in the end of the list of terms)
 
-    for(let term of terms ) {
-
-      console.log(term)
+    for( let term of terms ) {
 
       // Consider only those terms which have an F probability smaller than
-      // the rejection level specified (usually 0.05). Also, ignore
-      // interactions with more than three factors for simplicity
-      // (terms with 'order' > 3).
+      // the rejection level specified (usually 0.05). Also, to make things
+      // simpler, ignore interactions involving more than three factors
+      // (terms with 'order' > 3) or terms with 'no tests' for which the
+      // attribute 'against' is -1).
 
       if( ( term.P < rejection_level ) && ( term.nlevels > 0 ) &&
           ( term.order < 4 ) && ( term.against !== -1 ) ) {
@@ -274,11 +271,10 @@ var anova = (function () {
         // factors. Multiple tests are useless for random factors. Go along
         // the array 'terms[].codes' for the current term (ignoring the last
         // element which stands for the Error component) and annotate any
-        // factor involved ('codes[] == 1) which is of type "fixed". This
+        // factor involved ('codes[] == 1) which is of type "FIXED". This
         // will be called the target factor. All candidate comparisons will
-        // be stored in 'mcomps', an array of JSON objects that will hold
-        // all the necessary information for processin an a_posteriori
-        // multiple test
+        // be stored in 'mcomps', an array of objects that will hold all the
+        // necessary information for processin a Post Hoc test
 
         for (let i = 0, fl = factors.length; i < fl; i++ ) {
 
@@ -321,6 +317,9 @@ var anova = (function () {
 
             tgt.term = term.name;
 
+            // Store the term's codes involved in this term
+            tgt.codes = term.codes;
+
             // For some multiple tests the 'df' and the 'MS' of the term
             // used in the denominator of the F test for this particular
             // term ('term[t].against') is needed, so we pass it through
@@ -333,7 +332,7 @@ var anova = (function () {
             // necessary. These averages are the averages of the levels of
             // the 'tgt' factor. They will be passed in an array containing
             // the level 'name' (not its 'code'), the number of replicates
-            //used to compute the average of each level, and the
+            // used to compute the average of each level, and the
             // corresponding variance. This is easy if the 'term' being
             // considered (t) corresponds to a main factor (which has
             // 'term[t].order' == 1) as all necessary values are stored in
@@ -459,11 +458,72 @@ var anova = (function () {
         }
       }
     }
-    
-//     We have scanned all terms. 'target' has a list of all possible
-//     comparisons!
-    
-    console.log('mcomps: ',mcomps);
+
+    //     We have scanned all terms. 'mcomps' has a list of all possible
+    //     comparisons!
+
+    if ( mcomps.length > 0 ) {
+
+      // If 'ignoreinteractions' is not enabled (true) we must eliminate
+      // from post hoc tests any test that includes factors or interactions
+      // involved in other interactions of higher order! For example, if
+      // interaction AxCxD is significant (in a four factor ANOVA involving
+      // also factor B), post hoc tests for levels of A, C, D, AxC, AxD and
+      // CxD should not be computed. This is the correct behaviour, and has
+      // been explained in many articles on the ANOVA. If the interaction
+      // AxCxD is significant, it means that differences on averages of A
+      // depend on the combination of the levels of C and D being considered.
+      // This logic extends also to differences among means of the other two
+      // factors (C and D). However, note that it's still possible to inspect
+      // differences between levels of factor B, provided it is not involved
+      // in a significant interaction with any of the other three factors.
+
+      if ( !ignoreinteractions ) {
+
+        // If there is just a single factor to be analyzed, go ahead and do
+        // the post hoc tests for it. Otherwise, check if it is involved in
+        // higher order interactions, in which case it should be excluded.
+        // We go from top ( main factors) to bottom of 'mcomps' and for each
+        // candidate we check if there is any other 'mcomp' where the codes
+        // of the current ('i') 'mcomp' are also present.
+
+        if ( mcomps.length > 1 ) {
+          for ( let i = 0; i < mcomps.length - 1; i++ ) {
+            for ( let j = i + 1; j < mcomps.length; j++ ) {
+
+              // Check if we are not comparing differnt comparisons
+              // among components of the same term
+
+              if ( mcomps[i].term != mcomps[j].term ) {
+
+                // Go along the codes of 'mcomp[j].codes' and check if
+                // they include all codes in 'mcomp[i].codes'
+                let included = true;
+
+                for ( let k = 0; k < mcomps[i].codes.length; k++) {
+                  if ( ( mcomps[j].codes[k] > 0 ) &&
+                       ( mcomps[i].codes[k] === 0 ) ) included = false;
+                }
+                if ( included == false ) mcomps[i].excluded = true;
+
+              }
+            }
+          }
+        }
+
+
+
+      }
+
+      // console.log(mcomps);
+
+      // Display the tab with multiple comparisons if any is selected
+
+      computePostHocTests();
+
+    }
+
+    //console.log(factors)
   }
   
   
@@ -483,9 +543,6 @@ var anova = (function () {
 
   function buildTerms() { 
         
-    //#DEBUG
-    console.log('buildTerms() called');
-    //!DEBUG
 
     // Construct a list of 'terms' (denoting either main factors or
     // interactions) assuming that a fully orthogonal analysis is being done.
@@ -572,11 +629,6 @@ var anova = (function () {
     }
     
     
-    //#DEBUG
-    //console.table(terms)
-    displayTerms("Unsorted and uncorrected terms");
-    //!DEBUG
-    
     // Compute the 'partials' list, i.e., a list with all terms potentially
     // included in an ANOVA.
 
@@ -613,27 +665,18 @@ var anova = (function () {
       let e = terms.length - 2;
       terms[e].MS = terms[e].SS/terms[e].df;
 
-      //#DEBUG
-      displayTerms( "List of Terms" );
-      //!DEBUG
 
       // Check if there are nested factors and correct the
       // ANOVA terms if necessary
 
       correctForNesting();
 
-      //#DEBUG
-      displayFactors();
-      //!DEBUG
 
       // Compute Cornfield-Tukey rules to determine
       // denominators for the F-tests
 
       computeCTRules();
 
-      //#DEBUG
-      displayTerms( "List of Corrected Terms" );
-      //!DEBUG
 
       // Display tables of averages per factor or combinations of factors
 
@@ -641,11 +684,7 @@ var anova = (function () {
 
       // Build the list of multiple comparisons, if any available
 
-      buildMultipleComparisons();
-
-      // Display the tab with multiple comparisons if any is selected
-
-      displayMultipleComparisons();
+      buildPostHocTests();
 
       // Finally display the ANOVA table
 
@@ -670,9 +709,6 @@ var anova = (function () {
 
   function computeCTRules() {
 
-    //#DEBUG
-    console.log('computeCTRules() called');
-    //!DEBUG
     
     // Build the table of multipliers for all terms
     // Skip the last two terms. The 'Total' is not necessary
@@ -876,9 +912,6 @@ var anova = (function () {
 
   function computeCells() {
 
-    //#DEBUG
-    console.log('computeCells() called');
-    //!DEBUG
 
     // Use 'maxn' to estimate the maximum number of replicates per cell.
     // In a balanced data set, all 'cells' will have the same number of
@@ -1003,9 +1036,6 @@ var anova = (function () {
     
     replicates = data[0].n;
     
-    //#DEBUG
-    displayCells();
-    //!DEBUG
     
     // It's time to compute homogeneity tests for this data set
     //because most depend only on having information of averages and
@@ -1014,13 +1044,246 @@ var anova = (function () {
     //information!
     
     homogeneityTests();
-    
+
+    // Setup the are where Post Hoc tests are displayed
+
+    setupPostHocTests();
+
     // Compute the terms of the linear model
-    
+
     buildTerms();
 
   }
   
+
+  /****************************************************************************/
+  /*                                                                          */
+  /*                         studentizedComparisons                           */
+  /*                                                                          */
+  /* This function computes Post Hoc tests based on the studentized range     */
+  /* These include Student-Newman-Keules (SNK), Tukey (or HSD aka Honestly    */
+  /* Significant Diference), or Duncan tests are all examples of this type of */
+  // procedures. Duncan test will not be implemented for now as it depends on */
+  /* a modified Studentized Range distribution, made by Duncan himself, but   */
+  /* for which I know no CDF function. The paper describing a correction to   */
+  /* Duncan's tabulated values is Harter (1960)                               */
+  /*                                                                          */
+  /****************************************************************************/
+
+  function studentizedComparisons(test, fact, df, ms, avgs) {
+
+    let fmt = {minimumFractionDigits: DPL};
+
+    //console.log(avgs)  
+    let t = "";
+    let comps = [], p = 0;
+    // t += '<p>' + fact.toString() + ' ' +
+    //      df.toString() + ' ' + ms.toString() +'</p>';
+    let total_range = avgs.length;
+    let range = total_range;
+    do {
+      let times = total_range - range + 1; 
+      for( let i = 0; i < times; i++ ) {
+        let j = i + range - 1;
+
+        // console.log( 'Compare level ' + avgs[i].level +
+        //              ' against level ' + avgs[j].level );
+        
+        let q = Math.abs(avgs[i].average - avgs[j].average);
+
+        q /= Math.sqrt( ms / avgs[i].n );
+
+        if (test == 'tukey') p = 1 - jStat.tukey.cdf( q, total_range, df );
+        if (test == 'snk')   p = 1 - jStat.tukey.cdf( q, range, df );
+
+        // Duncan's test will not be implemented as it depends on a modified
+        // Studentized Range distribution developed by Duncan himself but later
+        // corrected by Harter (1960). One option is to inspect R code where
+        // this distribution is implemented in several places...
+        //
+        // if (test == 'duncan' ) {
+        //  console.log('Compare level ' + avgs[i].level + ' against level ' + avgs[j].level);
+        //  p = 1-jStat.tukey.cdf(q, range, df);
+        //  console.log('q=' + q.toString() + ' range=' + range.toString() + ' df=' +df.toString() + ' p=' + p.toString());
+        //  console.log('p=0.05 range=' + range.toString() + ' df=' + df.toString() + ' q=' + jStat.tukey.inv(0.95, range, df).toString());
+        // }
+        
+        if( p > mt_rejection_level ) {
+          let included = false;
+          for( let k = 0, kl = comps.length; k < kl; k++ ) { 
+            if( ( i >= comps[k][0] ) && (j <= comps[k][1]) ) {
+              included = true;
+              break;
+            }    
+          }
+          if(!included) {
+            //comps.push({a1: i, a2: j, q: q, p: p});   
+            comps.push([ i, j ]);  
+            //t += '<p>' + i.toString() + ' == ' + j.toString() + '</p>';  
+            //t += '<p>' + avgs[i].level + ' = ' + avgs[j].level +
+            //     '    <i>(' + i.toString() + ' = ' + j.toString() +
+            //     ')</i></p>';
+            //console.log(q,p); 
+          }  
+        }
+        //console.log(q,p); 
+      }
+      range--;  
+    } while(range > 1);
+    
+    // Check wich levels of the target factor fall outside the homogeneous
+    // groups in 'comps' and add them to the list.
+    
+    for( let i = 0, il = avgs.length; i < il; i++ ) {
+      let included = false;  
+      for ( let j = 0, jl = comps.length; j < jl; j++) {
+        if( ( i >= comps[j][0] ) && ( i <=  comps[j][1] ) ) {
+          included = true;
+          break;
+        }    
+      }    
+      if( !included ) {
+        comps.push([i, i]);  
+      }    
+    }    
+    
+    comps.sort((a, b) => (a[0] >  b[0])? 1 : -1); 
+    
+    // console.log(comps)
+    
+    t += '<table>' +
+         '<tr><th>Level</th><th>Average</th><th>n</th>';
+    for( let i = 0, il = comps.length; i < il; i++ ) {
+      t += '<th>&nbsp;</th>';
+    }
+    t += '</tr>';
+    for( let i = 0, il = avgs.length; i < il; i++ ) {
+      t += '<tr><td>' + avgs[i].level + '</td><td class="flt">' +
+           avgs[i].average.toLocaleString( undefined, fmt ) +
+           '</td><td>' +
+           avgs[i].n.toString() + '</td>';
+      for(let j = 0, jl = comps.length; j < jl; j++) {
+        if(( i >= comps[j][0] ) && (i <= comps[j][1])) {
+          t += '<td>&#9679;</td>';
+        }
+
+        else t += '<td>&nbsp;</td>';
+      }
+      t += '</tr>';
+    }
+    t += '</table>';
+    return t;
+  }
+
+  /****************************************************************************/
+  /*                                                                          */
+  /*                           computePostHocTests                            */
+  /*                                                                          */
+  /* This function computes Post Hoc tests (differences between averages of   */
+  /* levels of fixed factors). Only factor or interactions which display F    */
+  /* statistics below the rejection criterion (usually 0.05) will be shown!   */
+  /*                                                                          */
+  /****************************************************************************/
+
+
+  function computePostHocTests() {
+
+    // studentized range statistics. Student Newman Keuls, Tukey, are
+    // all based on studentized range Q.
+
+    let studentized = ['snk', 'tukey'];
+
+    // Grab the <select> element which holds the type of multiple test
+    // to apply which is denoted by id='test'
+
+    let elem = document.getElementById("mtest");
+
+    let testName = '';
+
+    for( let e of elem ) {
+      if( e.selected ) {
+        testName = e.value;
+        break;
+      }
+    }
+
+    // use 'elem' to point to a <div> which will hold the results
+    // of the multiple tests (id='mtest_results')
+
+    elem = document.getElementById("mtest_results");
+
+    // If the selection is not 'None' (index 0)...
+
+    let text = "";
+
+    for( let m of mcomps ) {
+
+      let dferr = m.df_against,
+          mserr = m.ms_against,
+          fcode = m.fcode;
+
+      if ( m.excluded && !ignoreinteractions) continue;
+
+      //Display a header for the multiple comparisos
+
+      text += '<div class="ht">';
+      if(m.type == 'interaction') {
+        text += '<h2>Interaction ' + m.term + '</h2>';
+      }
+      text += '<h3>Multiple comparisons between levels of factor ' +
+              m.fname + '</h3>';
+
+      // Go along the whole list of comparisons for this term. It may be just
+      //a single test if 'mcomps' is of type 'factor' (involves comparisons
+      // between multiple averages), or it can be a series of tests, one for
+      // each combination of levels of facto.rs whith which the one being
+      // compared interacts with
+
+      for(let a in m.averages) {
+
+        // Check if this is an interaction. If so, specify the combination
+        // of levels of interacting factors within which multiple tests are
+        // being carried for factor 'mcomps[i].fcode'. The 'key' for the
+        // 'mcomps[i].averages[]' array holds the combination of levels
+        // involved with '-' for factors not included in the interaction
+        // or the target factor itself.
+
+        if( m.type == 'interaction' ) {
+          let f = a.split(',');
+          //console.log(f);
+          let t = [];
+          for(let j = 0, jlen = f.length; j < jlen; j++ ) {
+            if( f[j] != '-' ) {
+              t.push( 'level <i>' + factors[j].levels[f[j]] +
+                      '</i> of factor ' + factors[j].name );
+            }
+          }
+          text += '<h4>For ' + t.join(' and ') + '</h4>';
+        }
+
+        // Check if the multiple test is of type 'studentized range'
+        // and if so pass the relevant information to a function
+        // that computes several studentized range tests.
+
+        if( studentized.indexOf(testName) != -1 ) {
+          text += studentizedComparisons(testName,
+                                         fcode,
+                                         dferr,
+                                         mserr,
+                                         m.averages[a] );
+        }
+      }
+      text += '</div>';
+    }
+    if( text == "" ) {
+      text = '<h3>No multiple tests available!</h3>' +
+             '<p>Are you sure there are significant differences ' +
+             'in fixed factors?</p>';
+    }
+    elem.innerHTML = text;
+    elem.style.display = 'block';
+
+  }
    
   /****************************************************************************/
   /*                                                                          */
@@ -1043,9 +1306,6 @@ var anova = (function () {
   function correctForNesting() {
 
 
-    //#DEBUG
-    console.log('correctForNesting() called');
-    //!DEBUG
 
     // No need to check for nesting if there is only one factor,
     // or if there is no hint on nested factors ('nested' == false).
@@ -1088,7 +1348,7 @@ var anova = (function () {
                 
               // In the current term, we set the code's column 'k' to 2 (two)
               // to denote that factor 'k' nests a factor involved in this
-              // term. Thre may be multiple 'k's if the 'current' term
+              // term. There may be multiple 'k's if the 'current' term
               // involves a factor nested in an interaction between two or
               // more factors. This notation will come in handy to compute
               // Cornfield-Tukey Rules later on
@@ -1108,7 +1368,9 @@ var anova = (function () {
                   
                 factors[current].nestedin[k] = 1;
                 factors[current].type = RANDOM;
-                
+                factors[current].name = '<span class="random">' +
+                                      factors[current].orig_name + '</span>';
+
                 // correcting levels of this term will be done later during
                 // the correction of term's names
                 
@@ -1147,10 +1409,6 @@ var anova = (function () {
       current++;  
     }
     
-    //#DEBUG    
-    displayFactors( factors );
-    displayTerms('Terms before correcting for nesting', terms);
-    //!DEBUG
     
     correctTermNames();
 
@@ -1184,9 +1442,6 @@ var anova = (function () {
   
   function correctTermNames() {
 
-    //#DEBUG
-    console.log('correctTermNames() called');
-    //!DEBUG
       
     // For factors that are nested into others, correct the nesting depth
     // (number of factors where it is nested into, i.e. number of 'nestedin'
@@ -1225,7 +1480,10 @@ var anova = (function () {
         f.depth = factors[i].depth;
         f.name = factors[i].name;
         nfl.push(f);
-      }  
+        factors[i].nested = true;
+      } else {
+        factors[i].nested = false;
+      }
     }
     
     // Sort nested factors from lowest nesting depths to highest nesting depths
@@ -1244,7 +1502,7 @@ var anova = (function () {
     // 3  D      [0,0,0,0]  0
     //
     // For factor C, nesting in A is redundant because B (in which
-    // it nested) is itself nested in A. The 'nestdin' for C should
+    // it is nested) is itself nested in A. The 'nestdin' for C should
     // be [0,1,0,0]. Why? Because the name for B will be replaced
     // by B(A) (its depth is 1, so this is done before renaming C,
     // which depth is 2). Now when we replace factor names in C,
@@ -1321,47 +1579,48 @@ var anova = (function () {
   
   function displayANOVA() {
 
-    //#DEBUG
-    console.log('displayANOVA() called');
-    //!DEBUG
+
+    let fmt = {minimumFractionDigits: DPL};
 
     let text = '<div class="ct"><table>' +
                '<thead><tr><th>Source</th><th>SS</th><th>df</th>' +
                '<th>MS</th><th>F</th><th>Prob.</th><th>MS Denom.</th>' +
                '</tr></thead><tbody>';
 
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      text += '<tr>';
-      text += '<td>' + terms[i].name + '</td>';
-      text += '<td class=\"flt\">' + terms[i].SS.toFixed(DPL).toString() + '</td>';
-      text += '<td>' + terms[i].df.toString() + '</td>';
-      if( terms[i].name != 'Total' ) {
-        text += '<td class=\"flt\">' + terms[i].MS.toFixed(DPL).toString() + '</td>';
+    for(let t of terms ) {
+      text += '<tr>' + '<td>' + t.name + '</td>' +
+              '<td class=\"flt\">' +
+              t.SS.toLocaleString( undefined, fmt ) +
+              '</td>' + '<td>' + t.df.toString() + '</td>';
+      if( t.name != 'Total' ) {
+        text += '<td class=\"flt\">' +
+                t.MS.toLocaleString( undefined, fmt ) +
+                '</td>';
       } else {
         text += '<td></td>';
       }
-      let nm = terms[i].against;
-      if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td class=\"flt\">' + terms[i].F.toFixed(DPL).toString() +'</td>';
-        let prob = '';
-        if ( terms[i].P > rejection_level )
-             prob = terms[i].P.toFixed(DPL).toString();
-        else {
-          if( alpha ) {
-            prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
-          } else prob = terms[i].P.toFixed(DPL).toString();
+      let nm = t.against;
+      if( nm > -1 ) {
+        text += '<td class=\"flt\">' +
+                t.F.toLocaleString( undefined, fmt ) +
+                '</td>';
+        let p = t.P.toLocaleString( undefined, fmt );
+        if( alpha && ( t.P < rejection_level ) ) {
+          p = '<b><i>' + p + '</i></b>';
         }
-        text += '<td class=\"flt\">' + prob + '</td>';
-        text += '<td>' + terms[nm].name + '</td>';
+        text += '<td class=\"flt\">' + p + '</td><td>' + terms[nm].name +
+                '</td>';
       } else {
-        text += '<td></td>';
-        text += '<td></td>';
+        text += '<td></td><td></td>';
         if ( nm == -1) text += '<td><b>No Test</b></td>';
         else text += '<td></td>';
       }
       text += '</tr>';
     }
-    text += '</tbody></table></div>';
+    text += '</tbody></table>';
+    text += '<p style="font-size: 12px;">' +
+            'Note: Random factors are displayed in <span class="random">' +
+            'Serif</span> font</p></div>';
 
     // Update contents of 'display' tab (ANOVA results)
 
@@ -1383,9 +1642,6 @@ var anova = (function () {
   
   function displayAverages() {
 
-    //#DEBUG
-    console.log('displayAverages() called');
-    //!DEBUG
         
     let d = document.getElementById('averages'); 
     
@@ -1393,6 +1649,8 @@ var anova = (function () {
     // multiple calls to the DOM structure
   
     let table = '';
+
+    let fmt = {minimumFractionDigits: DPL};
     
     for(let i = 0, len = terms.length - 2; i < len; i++ ) {
        
@@ -1417,9 +1675,11 @@ var anova = (function () {
             table += '<td>' + factors[k].levels[levs[k]] + '</td>'; 
           }  
         }
-        table += '<td>' + terms[i].average[j].toFixed(DPL) + '</td>';
-        let n = parseInt(terms[i].n[j]);
-        table += '<td>' + n.toFixed(DPL) + '</td>';
+        table += '<td class="flt">' +
+                 terms[i].average[j].toLocaleString(undefined,fmt) +
+                 '</td>';
+        let n = terms[i].n[j];
+        table += '<td>' + n.toString() + '</td>';
         
         let std = 0, variance = 0;
         if( n > 1 ) {
@@ -1428,8 +1688,10 @@ var anova = (function () {
           std = Math.sqrt(variance,2);
         }
         
-        table += '<td>' + std.toFixed(DPL) + '</td>';
-        table += '<td>' + variance.toFixed(DPL) + '</td>';
+        table += '<td class="flt">' +
+                 std.toLocaleString(undefined,fmt) + '</td>';
+        table += '<td class="flt">' +
+                 variance.toLocaleString(undefined,fmt) + '</td>';
         table += '</tr>'; 
       } 
       table += '</tbody></table>';
@@ -1447,58 +1709,33 @@ var anova = (function () {
   
   function displayCTRules( ) {
 
-    //#DEBUG
-    console.log('displayCTRules() called');
-    //!DEBUG
     
     let c = document.getElementById('ctrules'); 
 
-    //#DEBUG
-    let d = document.getElementById('debug');
-    //!DEBUG
     
     let table = '<div class="ct"><table><thead>';
 
-    //#DEBUG
-    let dbgtable = '<h5>Cornfield-Tukey Rules</h5>' + table;
-    //!DEBUG
 
     // Build the header of the table. First column for the ANOVA term name
 
     table += '<tr><th>Term</th>';
 
-    //#DEBUG
-    dbgtable += '<tr><th>Term</th>';
-    //!DEBUG
 
     // Now add one column for each subscript associated with each factor,
     // plus one column for the Error. This is the CT table of multipliers,
     // and its display is just for debugging purposes
 
-    //#DEBUG
-    for ( let i = 0, len = factors.length + 1; i < len; i++) {
-      dbgtable += '<th>' + String.fromCharCode(i+105) + '</th>';
-    }
-    //!DEBUG
 
     // We should build a table with as many columns as ANOVA terms (including
     // the Error term) which will display the components of variance measured
     // by each term. Again, displaying this is only necessary while debugging
 
-    //#DEBUG
-    for ( let i = terms.length - 2; i >= 0; i--) {
-      dbgtable += '<th>' + terms[i].name + '</th>';
-    }
-    //!DEBUG
 
     // Finally a column to display which variance components are estimated
     // by each term
 
     table += '<th>Estimates</th></tr></thead><tbody>';
 
-    //#DEBUG
-    dbgtable += '<th>Estimates</th></tr></thead><tbody>';
-    //!DEBUG
     
     // Compute CT rows. If DEBUG is set the table is more complex than
     // for regular operation, where we need only the factor or interaction
@@ -1548,25 +1785,17 @@ var anova = (function () {
 
       table += '<tr><td>' + terms[i].name + '</td>';
       
-      //#DEBUG
-      dbgtable += '<tr><td>' + terms[i].name + '</td>';
-      
-      for ( let j = 0, len = factors.length +1; j < len; j++) {
-        dbgtable += '<td>' + terms[i].ct_codes[j].toString() + '</td>';
-      }    
-      for ( let j = terms.length - 2; j >= 0; j--) {
-        dbgtable += '<td>' + terms[i].varcomp[j].toString() + '</td>';  
-      }
-
-      //!DEBUG
-      let components = [], name = '', vc = '&sigma', compname = '', maincomp='';
+      let components = [], name = '', vc = '&sigma',
+          compname   = '', maincomp='';
 
       // Start in the Error term ( index terms.length-2 ) and go upwards
       // until term 0 (first main factor)
 
       for ( let j = terms.length - 2; j >= 0; j--) {
         if( terms[i].varcomp[j] > 0 ) {
-          if( ( terms[j].name === 'Error' ) || ( terms[j].name === 'Residual' ) ) name = '&epsilon;';
+          // The 'Error' or 'Residual' terms have no levels, hence the
+          // attribute 'nlevels' set to 0
+          if ( terms[j].nlevels === 0 ) name = '&epsilon;';
           else name = terms[j].name;
           if( terms[j].type === RANDOM ) vc = '&sigma;';
           else vc = '&Sigma;';
@@ -1580,22 +1809,15 @@ var anova = (function () {
 
       table += '<td>' + components.join(' + ') + '</td></tr>';
       
-      //#DEBUG
-      dbgtable += '<td>' + components.join(' + ') + '</td></tr>';
-      //!DEBUG
     }
     
-    table += '</tbody></table></div>';
+    table += '</tbody></table><p style="font-size: 12px;">' +
+            'Note: Random factors are displayed in <span class="random">' +
+            'Serif</span> font</p></div>';
     
-    //#DEBUG
-    dbgtable += '</tbody></table></div>';
-    //!DEBUG
     
     c.innerHTML = table;
     
-    //#DEBUG
-    d.innerHTML += dbgtable;
-    //!DEBUG
   } 
   /****************************************************************************/
   /*                                                                          */
@@ -1610,47 +1832,6 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
   
-  //#DEBUG
-  function displayCells() {
-
-    console.log('displayCells() called');
-
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>List of Partials</h5><div><table><thead>';
-    
-    table += '<tr>';
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<th>' + factors[i].name + '</th>';
-    }
-    
-    table += '<th>n orig.</th><th>n</th><th>sumx</th>' +
-             '<th>sumx2</th><th>ss</th></thead><tbody>';
-    
-    for(let i = 0, len = data.length; i < len; i++ ) {
-      table += '<tr>';
-      for(let j = 0, l = data[i].codes.length; j < l; j++ ) {
-        let c = data[i].codes[j];
-        let name = factors[j].levels[c];
-        table += '<td>' + name + '</td>';
-      }
-      table += '<td>' + data[i].n_orig.toString() + '</td>';
-      table += '<td>' + data[i].n.toString() + '</td>';
-      table += '<td>' + data[i].sumx.toString() + '</td>';
-      table += '<td>' + data[i].sumx2.toString() + '</td>';
-      table += '<td>' + data[i].ss.toString() + '</td>';
-      table += '</tr>';
-    }
-
-    table += "</tbody></table></div>";
-
-    table += '<h5>Replicates</h5><div class="contentor"><table><thead>';
-    table += '<tr><td>Replicates</td></tr></thead><tbody><tr><td>';
-    table += replicates + '</td></tr></tnody></table></div>';
-    
-    d.innerHTML += table;
-  }
-  //!DEBUG
 
   /****************************************************************************/
   /*                                                                          */
@@ -1662,9 +1843,6 @@ var anova = (function () {
 
   function displayData() {
 
-    //#DEBUG
-    console.log('displayData() called');
-    //!DEBUG
     
     let tb = document.getElementById('datatab');
 
@@ -1718,9 +1896,6 @@ var anova = (function () {
 
   function displayDataTable() {
 
-    //#DEBUG
-    console.log('displayDataTable() called');
-    //!DEBUG
 
     let tb = document.getElementById( 'datatable' );
 
@@ -1731,29 +1906,37 @@ var anova = (function () {
     for(let i = 0, nf = factors.length; i < nf; i++ ) {
       table += '<th>' + factors[i].name + '</th>';
     }
-    table += '<th>DATA</th></tr></thead><tbody>';
+    table += '<th>DATA</th></tr></thead>';
 
-    let lcodes = '';
+    // Build a line to denote if factors are 'FIXED' or 'RANDOM'
+    // This will allow one to change this attribute if the factor
+    // is not nested, in which case it is 'RANDOM' (mandatory)
+
+    table += '<tbody>'
+
+    let lcodes;
 
     // Go along all ANOVA cells in 'data'
 
-    for( let i = 0, len = data.length; i < len; i++ ) {
+    for( let c of data ) {
 
       // Compute the level codes for each factor to be used by
       // all data values belonging to an ANOVA cell
 
       lcodes = '';
 
-      for(let j = 0, ll = data[i].levels.length; j < ll; j++ ) {
-        lcodes += '<td>' + data[i].levels[j] + '</td>';
+      for(let l of c.levels ) {
+        lcodes += '<td>' + l + '</td>';
       }
 
       // For each ANOVA cell display all of its data 'values' but
       // prepend the factor levels before
 
-      for( let j = 0, cl = data[i].values.length; j < cl; j++ ) {
+      for( let v of c.values ) {
         table += '<tr>' + lcodes;
-        table += '<td>' + data[i].values[j].toString() + '</td>';
+        table += '<td class="flt">' +
+                 v.toLocaleString(undefined, { minimumFractionDigits: DPL }) +
+                 '</td>';
         table += '</tr>';
       }
     }
@@ -1773,89 +1956,6 @@ var anova = (function () {
   /*                                                                          */
   /****************************************************************************/
 
-  //#DEBUG
-
-
-  function displayFactors() {
-
-    console.log('displayFactors() called');
-
-    // Get the 'anova_debug' <div> to append data
-    
-    let d = document.getElementById('debug'); 
-    
-    // Create the table as a whole text bunch of HTML to avoid
-    // multiple calls to the DOM structure
-  
-    let table = '<h5>Factors</h5><div><table>';
-    
-    // Append the header
-    
-    table += '<thead><tr><th>Name</th><th>Subs.</th>' +
-             '<th>Type</th><th>Levels</th><th>Levels\' Codes</th>' +
-             '<th>Nested in</th></tr></thead><tbody>';
-    
-    // Append rows. Th subscript for the current factor
-    // starting in 'i' (the first factor) is given by the
-    // formula 'factor index' + 105. The first factor has index = 0
-    // so the ASCII charcode 105 is equivalent to 'i'. The second
-    // factor 'i = 1' has charcode 106 which is equivalent to 'j',
-    // and so on...
-    
-    for(let i = 0, len = factors.length; i < len; i++ ) {
-      table += '<tr><td>' + factors[i].name + '</td>' +
-               '<td>' + String.fromCharCode(i+105) + '</td>' +
-               '<td>' + factors[i].type + '</td>' +
-               '<td>' + factors[i].nlevels.toString() + '</td>' +
-               '<td>' + factors[i].levels.toString(); + '</td>' +
-               '<td>' + factors[i].nestedin.toString(); + '</td></tr>';
-    }
-    
-    table += '</tbody></table><div>';
-    
-    d.innerHTML += table;
-
-  }
-  //!DEBUG
-  /****************************************************************************/
-  /*                                                                          */
-  /*                        displayMultipleComparisons                        */
-  /*                                                                          */
-  /*  This function displays multiple comparison between averages of factors  */
-  /*  or interactions levels for which the F statistics surpasses a given     */
-  /*  rejection criterion, usually set in 'Settings' (default is 0.05)        */
-  /*                                                                          */
-  /****************************************************************************/
-  
-  function displayMultipleComparisons() {
-
-    //#DEBUG
-    console.log('displayMultipleComparisons() called');
-    //!DEBUG
-        
-    let d = document.getElementById('mtests'); 
-    
-    // Create the text as a whole bunch of HTML to avoid
-    // multiple calls to the DOM structure
-    
-    // Provide two <divs>: one for selecting the type of test and the other
-    // to display the results of the multiple tests, identified by the
-    // id = 'mtest_results', but invisible (style="display:none") for now.
-
-    let text = '<div class="ct">' +
-            '<h3>Multiple Comparison Tests</h3>' +
-            '<p><input type="radio" name="test" value="none" checked>None</p>' +
-            '<p><input type="radio" name="test" value="snk">Student-Newman-Keuls (SNK)</p>' +
-            '<p><input type="radio" name="test" value="tukey">Tukey (HSD)</p>' +
-            '<p>Rejection criteria (&alpha;): <input type="number" id="mtests_alpha" value="' +
-             mt_rejection_level.toString() + 
-             '" min="0.00000" max="0.999999" step="0.01" onchange="anova.setMtAlpha()"/></p>' +
-             '<p><button onclick="anova.multipleTests()">Compute</button></p>' +
-            '</div>' +
-            '<div class="ct" id="mtest_results" style="display: none;"></div>';
-    
-    d.innerHTML = text;
-  }
 
   /*******************************************************************************/
   /*                                                                             */
@@ -1866,61 +1966,6 @@ var anova = (function () {
   /*                                                                             */
   /*******************************************************************************/
   
-  //#DEBUG
-  function displayTerms( title = '') {
-
-    console.log('displayTerms() called');
-
-    let d = document.getElementById('debug'); 
-    
-    let table = '<h5>' + title + '</h5><table>';
-    
-    // Build the table header
-    
-    table += '<thead><tr><th>idx</th><th>Order</th><th>Name</th>' +
-             '<th>Type</th><th>Codes</th><th>levels</th><th>combins</th>' +
-             '<th>df</th><th>level codes</th><th>n</th><th>averages</th>' +
-             '<th>sumx</th><th>sumx2</th><th>ss</th><th>SS</th>' +
-             '<th>MS</th><th>F</th><th>Against</th></tr></thead><tbody>';
-    
-    let a  = [];
-    let tp = '';
-
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      table += '<tr><td>' + terms[i].idx.toString() + '</td>';
-      table += '<td>'+terms[i].order.toString()+'</td>';
-      table += '<td>'+terms[i].name+'</td>';
-      //table += '<td></td>';
-
-      (terms[i].type===RANDOM)?tp='RANDOM':tp='FIXED';
-      table += '<td>' + tp + '</td>';
-      table += '<td>' + terms[i].codes.toString(); + '</td>';
-      table += '<td>' + terms[i].nlevels.toString() + '</td>';
-      table += '<td>' + terms[i].combins.toString() + '</td>';
-      table += '<td>' + terms[i].df.toString() + '</td>';
-      a = terms[i].levels.slice();
-      table += '<td>' + a.join(' : ') + '</td>';
-      a = terms[i].n.slice();
-      table += '<td>' + a.join(' : ') + '</td>';
-      a = terms[i].average.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>' + a.join(' : ') + '</td>';
-      a = terms[i].sumx.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>' + a.join(' : ') + '</td>';
-      a = terms[i].sumx2.slice();
-      for(let j = 0, l = a.length; j < l; j++ ) a[j] = a[j].toFixed(3);
-      table += '<td>' + a.join(' : ') + '</td>';
-      table += '<td>' + terms[i].ss.toFixed(3) + '</td>';
-      table += '<td>' + terms[i].SS.toFixed(3) + '</td>';
-      table += '<td>' + terms[i].MS.toFixed(3) + '</td>';
-      table += '<td>' + terms[i].F.toFixed(3) + '</td>';
-      table += '<td>' + terms[i].against + '</td>';
-    }
-    table +='</tbody></table>';
-    d.innerHTML += table;
-  }
-  //!DEBUG
   
   /****************************************************************************/
   /*                                                                          */
@@ -1934,9 +1979,6 @@ var anova = (function () {
  
   function getCellsSS() {
 
-    //#DEBUG
-    console.log('getCellsSS() called');
-    //!DEBUG
     
     // We will use these two lengths a lot, so cache them
     
@@ -2030,7 +2072,7 @@ var anova = (function () {
       // Change the name of the "Error" to "Residual" if there are
       // nested factors
       
-      if( nesting ) residual.name = 'Residual';
+      if( nesting ) residual.name = '<span class="random">Residual</span>';
       
       // Now, for this particular term, check if the replicates ('n') for all
       // levels or level combinations are similar. If not, the analysis is
@@ -2124,7 +2166,7 @@ var anova = (function () {
      * and the Total, with their respective sums of squares and dfs
      */
     
-    let te = { idx: tl, name: residual.name,
+    let te = { idx: tl+1, name: residual.name,
                codes: new Array(nfactors+1).fill(1),
                order: terms[tl-1].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: residual.df,
@@ -2133,7 +2175,7 @@ var anova = (function () {
                
     terms.push(te);
     
-    let tt = { idx: tl+1, name: 'Total', codes: new Array(nfactors+1).fill(1),
+    let tt = { idx: tl+2, name: 'Total', codes: new Array(nfactors+1).fill(1),
                order: terms[tl].order+1, combins: 0, nlevels: 0, levels: [],
                sumx: [], sumx2: [], n: [], average: [], ss: 0, df: total.df,
                SS: total.ss, ct_codes: [], varcomp: [], MS: 0, P: 0,
@@ -2141,17 +2183,13 @@ var anova = (function () {
                
     terms.push(tt);    
     
-//#DEBUG    
-    //console.log("Table of Terms")
-    //console.table(terms)
-//!DEBUG
     
     return true;
   }   
 
   /****************************************************************************/
   /*                                                                          */
-  /*                 Computation of homoscedasticity tests                    */
+  /*                              homogeneityTests                            */
   /*                                                                          */
   /*    So far, only Cochran's C and Bartlett's tests are implemented.        */
   /*                                                                          */
@@ -2159,9 +2197,6 @@ var anova = (function () {
 
   function homogeneityTests() {
 
-    //#DEBUG
-    console.log('homogeneityTests() called');
-    //!DEBUG
 
     let d = document.getElementById('homogen');
 
@@ -2183,6 +2218,8 @@ var anova = (function () {
   /****************************************************************************/
 
   function testBartlett() {
+
+    let fmt = {minimumFractionDigits: DPL};
       
     // Compute Bartlett's test
     //
@@ -2265,11 +2302,13 @@ var anova = (function () {
     if( prob < 0 ) prob = 0;
      
     let result = '';
-    result += '<p>&#120594;<sup>2</sup> = ' + bartlett_k.toFixed(DPL) + '</p>' +
+    result += '<p>&#120594;<sup>2</sup> = ' +
+              bartlett_k.toLocaleString( undefined, fmt ) + '</p>' +
               '<p>for <b><i>k</i> = ' + k.toString() +
               '</b> averages and <b>&nu; = ' + (k-1).toString() +
               '</b> degrees of freedom: <b>' +
-              '</b></p><p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+              '</b></p><p>P = ' + prob.toLocaleString( undefined, fmt ) +
+              '</p>';
     
     return result;
     
@@ -2284,6 +2323,8 @@ var anova = (function () {
 
 
   function testCochran() {
+
+    let fmt = {minimumFractionDigits: DPL};
       
     // Compute Cochran's C test which is a ratio between the largest sample
     // variance over the sum of all sample variances. 'maxvar' will hold
@@ -2341,11 +2382,12 @@ var anova = (function () {
     //P = jStat.centralF.cdf(f, df * (k - 1.0), df) * k;
 
     let result = '';
-    result += '<p>C = ' + cochran_C.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + k.toString() +
+    result += '<p>C = ' + cochran_C.toLocaleString( undefined, fmt ) +
+              '</p><p>for <b><i>k</i> = ' + k.toString() +
               '</b> averages and <b>&nu; = ' + df.toString() +
               '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+              '<p>P = ' + prob.toLocaleString( undefined, fmt ) +
+              '</p>';
     
     // Because of the problems mentioned above, and the fact that there is not
     // a true CDF function for Cochran's C, we also provide critical values
@@ -2366,16 +2408,19 @@ var anova = (function () {
     cv05 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.05/k, df, df*(k-1))));
     cv01 = 1/(1 + (k-1)/(jStat.centralF.inv(1-0.01/k, df, df*(k-1))));
     
-    result += "<p>Critical values of C for</p>";
-    result += "<p>&alpha; = <i>0.10</i> &xrarr; " + cv10.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv10 ? "heterogeneous":"homogeneous");
-    result += "</p>";
-    result += "<p>&alpha; = <i>0.05</i> &xrarr; " + cv05.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv05 ? "heterogeneous":"homogeneous");
-    result += "</p>";
-    result += "<p>&alpha; = <i>0.01</i> &xrarr; " + cv01.toFixed(DPL) + ", hence variances are ";
-    result += (cochran_C > cv01 ? "heterogeneous":"homogeneous");
-    result += "</p>";
+    result += '<p>Critical values of C for</p>' +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
+              ', hence variances are ' +
+              (cochran_C > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
 
     return result;
     
@@ -2390,6 +2435,8 @@ var anova = (function () {
 
 
   function testLevene() {
+
+    let fmt = { minimumFractionDigits: DPL };
 
     // The Levene's W test is
     //
@@ -2470,10 +2517,11 @@ var anova = (function () {
     let prob = 1 - jStat.centralF.cdf( levene, k - 1, N - k );
 
     let result = '';
-    result += '<p>F = ' + levene.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
-              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+    result += '<p>F = ' + levene.toLocaleString( undefined, fmt ) + '</p>' +
+              '<p>for <b><i>k</i> = ' + (k-1).toString() +
+              '</b> groups and <b>&nu; = ' + (N-k).toString() +
+              '</b> degrees of freedom</p><p>P = ' +
+              prob.toLocaleString( undefined, fmt ) + '</p>';
 
     let cv10 = 0;
     let cv05 = 0;
@@ -2484,13 +2532,16 @@ var anova = (function () {
     cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
 
     result += '<p>Critical values for</p>' +
-              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              '<p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              '<p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
               (levene > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
 
@@ -2527,222 +2578,44 @@ var anova = (function () {
 
     prob = 1 - jStat.centralF.cdf( brown_forsythe, k - 1, N - k );
 
-    result += '<h2>Brown-Forsythe\'s test</h2>' +
-              '<p>F = ' + brown_forsythe.toFixed(DPL) + '</p>' +
-              '<p>for <b><i>k</i> = ' + (k-1).toString() + '</b> groups and ' +
-              '<b>&nu; = ' + (N-k).toString() + '</b> degrees of freedom</p>' +
-              '<p>P = <b>' + prob.toFixed(DPL) + '</b></p>';
+    result += '<h2>Brown-Forsythe\'s test (with medians)</h2>' +
+              '<p>F = ' + brown_forsythe.toLocaleString( undefined, fmt ) +
+              '</p><p>for <b><i>k</i> = ' + (k-1).toString() +
+              '</b> groups and <b>&nu; = ' + (N-k).toString() +
+              '</b> degrees of freedom</p><p>P = ' +
+              prob.toLocaleString( undefined, fmt ) + '</p>';
 
-    cv10 = 0;
-    cv05 = 0;
-    cv01 = 0;
-
-    cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
-    cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
-    cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+    //
+    // cv10 = 0;
+    // cv05 = 0;
+    // cv01 = 0;
+    //
+    // cv10 = jStat.centralF.inv( 0.90, k - 1, N - k  );
+    // cv05 = jStat.centralF.inv( 0.95, k - 1, N - k  );
+    // cv01 = jStat.centralF.inv( 0.99, k - 1, N - k  );
+    //
+    // We don't need to compute the above quantities as they are
+    // the same as for the Levene's test with means.
 
     result += '<p>Critical values for</p>' +
-              '<p>&alpha; = <i>0.10</i> &xrarr; ' + cv10.toFixed(DPL) +
+              '<p>&alpha; = <i>0.10</i> &xrarr; ' +
+              cv10.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv10 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.05</i> &xrarr; ' + cv05.toFixed(DPL) +
+              (brown_forsythe > cv10 ? 'heterogeneous':'homogeneous') +
+              '</p><p>&alpha; = <i>0.05</i> &xrarr; ' +
+              cv05.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv05 ? 'heterogeneous':'homogeneous') + '</p>' +
-              '<p>&alpha; = <i>0.01</i> &xrarr; ' + cv01.toFixed(DPL) +
+              (brown_forsythe > cv05 ? 'heterogeneous':'homogeneous') +
+              '</p><p>&alpha; = <i>0.01</i> &xrarr; ' +
+              cv01.toLocaleString( undefined, fmt ) +
               ', hence variances are ' +
-              (brown_forsythe > cv01 ? 'heterogeneous':'homogeneous') + '</p>';
+              (brown_forsythe > cv01 ? 'heterogeneous':'homogeneous') +
+              '</p>';
 
     return result;
 
   }
 
-
-
-
-  function studentizedComparisons(test, fact, df, ms, avgs) {
-    //console.log(avgs)  
-    let t = "";
-    let comps = [], p = 0;
-    //t += '<p>' + fact.toString() + ' ' + df.toString() + ' ' + ms.toString() +'</p>';
-    let total_range = avgs.length;
-    let range = total_range;
-    do {
-      let times = total_range - range + 1; 
-      for( let i = 0; i < times; i++ ) {
-        let j = i + range - 1;
-
-        //console.log('Compare level ' + avgs[i].level + ' against level ' + avgs[j].level);
-        
-        let q = Math.abs(avgs[i].average - avgs[j].average)/Math.sqrt( ms / avgs[i].n );
-        if(test == 'tukey') p = 1 - jStat.tukey.cdf(q, total_range, df);
-        if(test == 'snk')   p = 1 - jStat.tukey.cdf(q, range, df);
-        
-        if( p > mt_rejection_level ) {
-          let included = false;
-          for( let k = 0, kl = comps.length; k < kl; k++ ) { 
-            if( ( i >= comps[k][0] ) && (j <= comps[k][1]) ) {
-              included = true;
-              break;
-            }    
-          }
-          if(!included) {
-            //comps.push({a1: i, a2: j, q: q, p: p});   
-            comps.push([ i, j ]);  
-            //t += '<p>' + i.toString() + ' == ' + j.toString() + '</p>';  
-            //t += '<p>' + avgs[i].level + ' = ' + avgs[j].level + '    <i>(' + i.toString() + ' = ' + j.toString() + ')</i></p>'; 
-            //console.log(q,p); 
-          }  
-        }
-        //console.log(q,p); 
-      }
-      range--;  
-    } while(range > 1);
-    
-    /*
-     * Check wich levels of the target factor fall outside the homogeneous
-     * groups in 'comps' and add them to the list.
-     */
-    
-    for( let i = 0, il = avgs.length; i < il; i++ ) {
-      let included = false;  
-      for ( let j = 0, jl = comps.length; j < jl; j++) {
-        if( ( i >= comps[j][0] ) && ( i <=  comps[j][1] ) ) {
-          included = true;
-          break;
-        }    
-      }    
-      if( !included ) {
-        comps.push([i, i]);  
-      }    
-    }    
-    
-    comps.sort((a, b) => (a[0] >  b[0])? 1 : -1); 
-    
-    //console.log(comps)
-    
-    t += '<table>';
-    t += '<tr><th>Level</th><th>Average</th><th>n</th>';
-    for( let i = 0, il = comps.length; i < il; i++ ) t += '<th>&nbsp;</th>';
-    t += '</tr>';
-    for( let i = 0, il = avgs.length; i < il; i++ ) {
-      t += '<tr><td>'+avgs[i].level+'</td><td>'+avgs[i].average.toString()+'</td><td>'+avgs[i].n.toString()+'</td>';
-      for(let j = 0, jl = comps.length; j < jl; j++) {
-        if(( i >= comps[j][0] ) && (i <= comps[j][1])) t += '<td>&#9679;</td>';
-        else t += '<td>&nbsp;</td>';
-      }
-      t += '</tr>'; 
-    }    
-    t += '</table>';
-    return t;
-  }    
-
-
-  function multipleTests() {
-    
-    //console.log(mcomps)
-      
-    /*
-     * studentized range statistics. Student Newman Keuls, Tuket, Duncan are
-     * all based on studentized range Q. 
-     */  
-    
-    let studentized = ['snk', 'tukey', 'duncan'];
-    
-    /*
-     * Grab the <select> element which holds the type of multiple test 
-     * to apply which is denoted by id='test'
-     */
-    
-    let elem = document.getElementsByName("test");
-    
-    let testName = 0;
-    for( let i = 0; i < elem.length; i++ ) {
-      if( elem[i].checked ) {
-        testName = elem[i].value;
-        break;
-      }  
-    } 
-    
-    /*
-     * use 'elem' to point to a <div> which will hold the results
-     * of the multiple tests (id='mtest_results')
-     */
-    
-    elem = document.getElementById("mtest_results"); 
-    
-    /*
-     * If the selection is not 'None' (index 0)...
-     */
-    
-    if( testName != 'none' ) {
-      let text = "";
-      
-      for(let i = 0, len = mcomps.length; i < len; i++ ) {
-       
-        let dferr = mcomps[i].df_against,
-            mserr = mcomps[i].ms_against,
-            fcode = mcomps[i].fcode;
-            
-        /*
-         * Display a header for the multiple comparison
-         */
-        
-        text += '<h3>Multiple comparisons for levels of factor ' + mcomps[i].fname;
-        if(mcomps[i].type == 'interaction') text += ' within levels of ' + mcomps[i].term + '</h3>';
-        else text += '</h3>'; 
-         
-        /*
-         * Go along the whole list of comparisons for this term. It may be just
-         * a single test if 'mcomps' is of type 'factor' (involves comparisons
-         * between multiple averages), or it can be a series of tests, one for
-         * each combination of levels of facto.rs whith which the one being 
-         * compared interacts with
-         */
-        
-        for(let a in mcomps[i].averages) {
-            
-          /*
-           * Check if this is an interaction. If so, specify the combination
-           * of levels of interacting factors within which multiple tests are
-           * being carried for factor 'mcomps[i].fcode'. The 'key' for the
-           * 'mcomps[i].averages[]' array holds the combination of levels
-           * involved with '-' for factors not included in the interaction
-           * or the target factor itself.
-           */
-
-          if( mcomps[i].type == 'interaction' ) {
-            let f = a.split(',');
-            //console.log(f);
-            let t = [];
-            for(let j = 0, jlen = f.length; j < jlen; j++ ) {
-              if( f[j] != '-' ) {  
-                t.push('level <i>' + factors[j].levels[f[j]] + '</i> of factor ' + factors[j].name);
-              }
-            }
-            text += '<h4>For ' + t.join(' and ') + '</h4>';
-          }    
-
-          /*
-           * Check if the multiple test is of type 'studentized range'
-           */
-          
-          if( studentized.indexOf(testName) != -1 ) {
-            text += studentizedComparisons(testName, fcode, dferr, mserr, mcomps[i].averages[a] );  
-          }  
-        }    
-      }
-
-      if( text == "" ) text="<h3>No multiple tests available!</h3>Are you sure there are significant differences in fixed factors?";
-      elem.innerHTML = text;
-      elem.style.display = 'inline-block';
-      
-        
-    } else {
-      elem.innerHTML = "";  
-      elem.style.display = 'none';
-    }    
-
-  }
   
   /****************************************************************************/
   /*                                                                          */
@@ -2756,9 +2629,6 @@ var anova = (function () {
 
   function openDataFile() {
 
-    //#DEBUG
-    console.log('openDataFile() called');
-    //!DEBUG
       
     // Grab the file object
     
@@ -2826,25 +2696,28 @@ var anova = (function () {
               nfactors = li.length - 1;
               
               for( let j = 0; j < nfactors; j++ ) {
-                factors[j] = {};
+                let f = {};
                 let name = li[j];
                 
                 // Factor names ending in '*' are of type 'RANDOM',
                 // otherwise they are of type 'FIXED'
 
-                
                 if( name.endsWith( '*' ) ) {
-                  factors[j].type = RANDOM;
+                  f.type = RANDOM;
                   name = name.slice( 0, name.length-1 );
                 } else {
-                  factors[j].type = FIXED;
+                  f.type = FIXED;
                 }
-                factors[j].name = name;
-                factors[j].orig_name = name;
-                factors[j].nlevels = 0;
-                factors[j].levels = [];
-                factors[j].nestedin = new Array( nfactors ).fill(0);
-                factors[j].depth = 0;
+                if ( f.type == FIXED ) f.name = name;
+                else f.name = '<span class="random">' + name + '</span>';
+                f.orig_name = name;
+                f.nlevels = 0;
+                f.levels = [];
+                f.nestedin = new Array( nfactors ).fill(0);
+                f.nested = false;
+                f.depth = 0;
+
+                factors.push(f);
               }   
               
               // The header was read. All subsequent lines will be
@@ -3001,13 +2874,9 @@ var anova = (function () {
         // successfully read
         
         let elem = document.getElementsByClassName("tabcontent");
-        for ( let i = 0, len = elem.length; i < len; i++ ) {
-          elem[i].innerHTML="";
-        }
+
+        for ( let e of elem ) e.innerHTML="";
         
-        //#DEBUG - Display Table of Factors 
-        displayFactors();
-        //!DEBUG
         
         displayData();
         
@@ -3038,42 +2907,45 @@ var anova = (function () {
   /*                                                                       */
   /*************************************************************************/
 
-  /*************************************************************************/
-  /*                                                                       */
-  /*                               setSettings                             */
-  /*                                                                       */
-  /* This function appends a list of settings into the <div id="settings"> */
-  /*                                                                       */
-  /*************************************************************************/
+  /****************************************************************************/
+  /*                                                                          */
+  /*                                 setSettings                              */
+  /*                                                                          */
+  /*   This function appends a list of settings into the <div id="settings">  */
+  /*                                                                          */
+  /****************************************************************************/
 
   let sts = [
     {
-      name : 'Use rejection criterium (&alpha;)',
+      name : '&alpha;',
+      set  : '<input type="number" id="anova_alpha" value="0.05" ' +
+             'min="0.00000" max="0.999999" step="0.05" onchange="' +
+             'anova.setAlpha()">',
+      desc : 'Rejection level for H<sub>0</sub> in main ANOVA tests'
+    },
+    {
+      name : 'Use rejection criterion (&alpha;)',
       set  : '<input type="checkbox" id="use_alpha"' +
-             ' onchange="anova.useAlpha()"',
+             ' onchange="anova.useAlpha()" checked>',
       desc : 'Check if you want to see in the ANOVA table F probabilities ' +
              'highlighted whenever the F statistic surpasses the critical ' +
-             'level for the &alpha; selected. If the probability ' +
-             'associated to F is smaller than &alpha;, the probability is ' +
-             'displayed in <b><em>emphasized bold</em></b> font. For ' +
-             'each term, you should interpret the probabilities in the ' +
-             'ANOVA table as the probability of obtaining an F value ' +
-             'equal or larger than the observed F value.'
+             'level for the &alpha; selected (above). If the probability ' +
+             'associated to F is smaller than &alpha; it is shown in ' +
+             '<b><em>emphasized bold</em></b> font.'
     },
     {
       name : 'Ignore interactions',
       set  : '<input type="checkbox" id="ignore_interactions"' +
-             ' onchange="anova.ignoreInteractions()"',
+             ' onchange="anova.ignoreInteractions()">',
       desc : 'Check if you want to see multiple <em>a posteriori</em> ' +
              'comparison tests for main factors that are involved in ' +
              'significant interactions with other factors.'
     },
     {
-      name : '&alpha;',
-      set  : '<input type="number" id="anova_alpha" value="0.05" ' +
-             'min="0.00000" max="0.999999" step="0.05" onchange="' +
-             'anova.setAlpha()"/>',
-      desc : 'Rejection criterium for H<sub>0</sub> in main ANOVA tests'
+      name : 'Precision',
+      set  : '<input type="number" id="precision" min="2" max="8" step="1"' +
+             ' onchange="anova.setPrecision()" value="' + DPL + '" />',
+      desc : 'Number of decimal places in tables (1 > x < 9).'
     }
   ];
 
@@ -3096,28 +2968,67 @@ var anova = (function () {
 
   /*************************************************************************/
   /*                                                                       */
-  /*                           displaySettings                             */
+  /*                            changeSettings                             */
   /*                                                                       */
   /* This function enables the Settings <div> to be viewd while hidding    */
   /* the ANOVA <div                                                        */
   /*                                                                       */
   /*************************************************************************/
 
-  function displaySettings() {
+  function changeSettings() {
 
-    let elem = document.getElementById("anovadisplay");
-    let sets = document.getElementById("settings");
+    let elem   = document.getElementById("anovadisplay");
+    let sets   = document.getElementById("settings");
+    let button = document.getElementById("activate_settings");
 
     if ( elem.style.display == "none" ) {
       elem.style.display = "block";
       sets.style.display = "none";
+      button.innerHTML = 'Settings';
+      button.style.background='#EFEFEF';
     } else {
       elem.style.display = "none";
       sets.style.display = "block";
+      button.innerHTML = 'Close';
+      button.style.background='red';
     }
   }
 
 
+  /****************************************************************************/
+  /*                                                                          */
+  /*                            setupPostHocTests                             */
+  /*                                                                          */
+  /*  This function sets up the area to display Post Hoc tests (also known as */
+  /*  a posteriori multiple comparison tests) between averages of factors or  */
+  /*  interactions for which the F statistics surpass a given rejection       */
+  /*  criterion, usually set in 'Settings' (default is 0.05)                  */
+  /*                                                                          */
+  /****************************************************************************/
+  
+  function setupPostHocTests() {
+
+        
+    let d = document.getElementById('mtests');
+    
+    // Create the text as a whole bunch of HTML to avoid
+    // multiple calls to the DOM structure
+    
+    // Provide two <divs>: one for selecting the type of test and the other
+    // to display the results of the multiple tests, identified by the
+    // id = 'mtest_results', but invisible (style="display:none") for now.
+
+    let text = '<div>' +
+            '<h3>Multiple Comparison Tests</h3>' +
+            '<p><select id="mtest" onchange="anova.computePostHocTests()">' +
+            //'<option value="duncan">Duncan</option>' +
+            '<option value="snk" selected>Student-Newman-Keuls (SNK)</option>' +
+            '<option value="tukey">Tukey (HSD)</option></select></p>' +
+            '<div id="mtest_results" style="display: none;"></div>' +
+            '</div>';
+    
+    d.innerHTML = text;
+  }
   /*************************************************************************/
   /*                                                                       */
   /*                            transformData                              */
@@ -3287,6 +3198,12 @@ var anova = (function () {
     // multiple tests may also have to be run again...
      
     displayANOVA();
+
+    // We have to redo multiple comparisons because changing the rejection
+    // level may have created new significant tests or may have rendered
+    // previously significant tests not significant
+
+    buildPostHocTests();
     
   }
 
@@ -3311,8 +3228,6 @@ var anova = (function () {
       if ( mt_rejection_level != NaN) {
         if(rejection_level > 1) rejection_level = 0.9999999;
         if(rejection_level < 0) rejection_level = 0.0000001;
-
-        console.log(mt_rejection_level)
 
         // We should redisplay the ANOVA table as some of the
         // terms may now be statistically significant. Moreover,
@@ -3345,16 +3260,20 @@ var anova = (function () {
     if ( ignoreinteractions === false ) ignoreinteractions = true;
     else ignoreinteractions = false;
 
+    // In any case we should redo Post Hoc tests!
+
+    buildPostHocTests();
+
   }
 
   /*************************************************************************/
   /*                                                                       */
   /*                             useAlpha                                  */
   /*                                                                       */
-  /*  Use a rejection criterium (alpha) to establish if a given p-value is */
+  /*  Use a rejection criterion (alpha) to establish if a given p-value is */
   /*  "statistically significant" or not. If checked, the p-values will be */
   /*  displayed in bold and emphasized font whenever they are lower than   */
-  /*  the criterium defined below                                          */
+  /*  the criterion defined below                                          */
   /*                                                                       */
   /*************************************************************************/
 
@@ -3414,9 +3333,6 @@ var anova = (function () {
 
   function resetAnalysis() {
 
-    //#DEBUG
-    console.log('resetAnalysis() called');
-    //!DEBUG
 
     // Clear results in all <divs> of class 'anovaTabContents' which are
     // children of <div id='anova'>
@@ -3443,7 +3359,27 @@ var anova = (function () {
   }
 
 
+  /*************************************************************************/
+  /*                                                                       */
+  /*                             setPrecision                              */
+  /*                                                                       */
+  /* This function sets/changes the number of decimal places of numbers in */
+  /* most of the tables.                                                    */
+  /*                                                                       */
+  /*************************************************************************/
 
+  function setPrecision() {
+    DPL = parseFloat(document.getElementById('precision').value);
+    if( DPL < 2 ) DPL = 2;
+    if( DPL > 8 ) DPL = 8;
+
+    // We should redisplay the ANOVA table as some of the
+    // terms may now be statistically significant. Moreover,
+    // multiple tests may also have to be run again...
+
+    displayANOVA();
+
+  }
   
   /*************************************************************************/
   /*                                                                       */
@@ -3459,11 +3395,12 @@ var anova = (function () {
     openDataFile: openDataFile,
     resetData: resetData,
     transformData: transformData,
-    multipleTests: multipleTests,
-    displaySettings: displaySettings,
+    computePostHocTests: computePostHocTests,
+    changeSettings: changeSettings,
     setSettings: setSettings,
     useAlpha: useAlpha,
-    ignoreInteractions: ignoreInteractions
+    ignoreInteractions: ignoreInteractions,
+    setPrecision: setPrecision
     
   } // End of 'return' (exported function)
   
@@ -3498,26 +3435,6 @@ function selectTab(name) {
 document.addEventListener('DOMContentLoaded', function () {
 
 
-  //#DEBUG
-
-  // Append 'debug' tab and corresponding <a href> if in Debug Mode
-
-  let t = document.getElementById('tab-contents');
-  let d = document.createElement('div');
-  d.className = 'tabcontent';
-  d.id = 'debug';
-  t.appendChild(d);
-
-  t = document.getElementById('tabs');
-  d = document.createElement('a');
-  d.name = 'debug';
-  d.className = 'tabs';
-  d.href = '#!';
-  d.onclick = function () { selectTab('debug'); };
-  d.innerHTML = 'Debug';
-  t.appendChild(d);
-
-  //!DEBUG
 
 
   anova.setSettings();
@@ -3539,7 +3456,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   document.getElementById('activate_settings').onclick = function() {
-    anova.displaySettings();
+    anova.changeSettings();
   };
     
 });

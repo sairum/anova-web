@@ -12,7 +12,7 @@
   function openDataFile() {
 
     //#DEBUG
-    console.log('openDataFile() called');
+    //console.log('openDataFile() called');
     //!DEBUG
       
     // Grab the file object
@@ -81,25 +81,28 @@
               nfactors = li.length - 1;
               
               for( let j = 0; j < nfactors; j++ ) {
-                factors[j] = {};
+                let f = {};
                 let name = li[j];
                 
                 // Factor names ending in '*' are of type 'RANDOM',
                 // otherwise they are of type 'FIXED'
 
-                
                 if( name.endsWith( '*' ) ) {
-                  factors[j].type = RANDOM;
+                  f.type = RANDOM;
                   name = name.slice( 0, name.length-1 );
                 } else {
-                  factors[j].type = FIXED;
+                  f.type = FIXED;
                 }
-                factors[j].name = name;
-                factors[j].orig_name = name;
-                factors[j].nlevels = 0;
-                factors[j].levels = [];
-                factors[j].nestedin = new Array( nfactors ).fill(0);
-                factors[j].depth = 0;
+                if ( f.type == FIXED ) f.name = name;
+                else f.name = '<span class="random">' + name + '</span>';
+                f.orig_name = name;
+                f.nlevels = 0;
+                f.levels = [];
+                f.nestedin = new Array( nfactors ).fill(0);
+                f.nested = false;
+                f.depth = 0;
+
+                factors.push(f);
               }   
               
               // The header was read. All subsequent lines will be
@@ -256,9 +259,8 @@
         // successfully read
         
         let elem = document.getElementsByClassName("tabcontent");
-        for ( let i = 0, len = elem.length; i < len; i++ ) {
-          elem[i].innerHTML="";
-        }
+
+        for ( let e of elem ) e.innerHTML="";
         
         //#DEBUG - Display Table of Factors 
         displayFactors();

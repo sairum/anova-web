@@ -9,46 +9,50 @@
   function displayANOVA() {
 
     //#DEBUG
-    console.log('displayANOVA() called');
+    //console.log('displayANOVA() called');
     //!DEBUG
+
+    let fmt = {minimumFractionDigits: DPL};
 
     let text = '<div class="ct"><table>' +
                '<thead><tr><th>Source</th><th>SS</th><th>df</th>' +
                '<th>MS</th><th>F</th><th>Prob.</th><th>MS Denom.</th>' +
                '</tr></thead><tbody>';
 
-    for(let i = 0, len = terms.length; i < len; i++ ) {
-      text += '<tr>';
-      text += '<td>' + terms[i].name + '</td>';
-      text += '<td class=\"flt\">' + terms[i].SS.toFixed(DPL).toString() + '</td>';
-      text += '<td>' + terms[i].df.toString() + '</td>';
-      if( terms[i].name != 'Total' ) {
-        text += '<td class=\"flt\">' + terms[i].MS.toFixed(DPL).toString() + '</td>';
+    for(let t of terms ) {
+      text += '<tr>' + '<td>' + t.name + '</td>' +
+              '<td class=\"flt\">' +
+              t.SS.toLocaleString( undefined, fmt ) +
+              '</td>' + '<td>' + t.df.toString() + '</td>';
+      if( t.name != 'Total' ) {
+        text += '<td class=\"flt\">' +
+                t.MS.toLocaleString( undefined, fmt ) +
+                '</td>';
       } else {
         text += '<td></td>';
       }
-      let nm = terms[i].against;
-      if( ( i < (terms.length - 2 ) ) && ( nm != -1 ) ) {
-        text += '<td class=\"flt\">' + terms[i].F.toFixed(DPL).toString() +'</td>';
-        let prob = '';
-        if ( terms[i].P > rejection_level )
-             prob = terms[i].P.toFixed(DPL).toString();
-        else {
-          if( alpha ) {
-            prob = '<b><i>' + terms[i].P.toFixed(DPL).toString() + '</i></b>';
-          } else prob = terms[i].P.toFixed(DPL).toString();
+      let nm = t.against;
+      if( nm > -1 ) {
+        text += '<td class=\"flt\">' +
+                t.F.toLocaleString( undefined, fmt ) +
+                '</td>';
+        let p = t.P.toLocaleString( undefined, fmt );
+        if( alpha && ( t.P < rejection_level ) ) {
+          p = '<b><i>' + p + '</i></b>';
         }
-        text += '<td class=\"flt\">' + prob + '</td>';
-        text += '<td>' + terms[nm].name + '</td>';
+        text += '<td class=\"flt\">' + p + '</td><td>' + terms[nm].name +
+                '</td>';
       } else {
-        text += '<td></td>';
-        text += '<td></td>';
+        text += '<td></td><td></td>';
         if ( nm == -1) text += '<td><b>No Test</b></td>';
         else text += '<td></td>';
       }
       text += '</tr>';
     }
-    text += '</tbody></table></div>';
+    text += '</tbody></table>';
+    text += '<p style="font-size: 12px;">' +
+            'Note: Random factors are displayed in <span class="random">' +
+            'Serif</span> font</p></div>';
 
     // Update contents of 'display' tab (ANOVA results)
 

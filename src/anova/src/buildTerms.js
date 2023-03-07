@@ -16,7 +16,7 @@
   function buildTerms() { 
         
     //#DEBUG
-    console.log('buildTerms() called');
+    //console.log('buildTerms() called');
     //!DEBUG
 
     // Construct a list of 'terms' (denoting either main factors or
@@ -103,7 +103,6 @@
       terms.push(temp);
     }
     
-    
     //#DEBUG
     //console.table(terms)
     displayTerms("Unsorted and uncorrected terms");
@@ -173,11 +172,7 @@
 
       // Build the list of multiple comparisons, if any available
 
-      buildMultipleComparisons();
-
-      // Display the tab with multiple comparisons if any is selected
-
-      displayMultipleComparisons();
+      buildPostHocTests();
 
       // Finally display the ANOVA table
 

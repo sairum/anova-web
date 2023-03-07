@@ -15,7 +15,7 @@
   function correctTermNames() {
 
     //#DEBUG
-    console.log('correctTermNames() called');
+    //console.log('correctTermNames() called');
     //!DEBUG
       
     // For factors that are nested into others, correct the nesting depth
@@ -55,7 +55,10 @@
         f.depth = factors[i].depth;
         f.name = factors[i].name;
         nfl.push(f);
-      }  
+        factors[i].nested = true;
+      } else {
+        factors[i].nested = false;
+      }
     }
     
     // Sort nested factors from lowest nesting depths to highest nesting depths
@@ -74,7 +77,7 @@
     // 3  D      [0,0,0,0]  0
     //
     // For factor C, nesting in A is redundant because B (in which
-    // it nested) is itself nested in A. The 'nestdin' for C should
+    // it is nested) is itself nested in A. The 'nestdin' for C should
     // be [0,1,0,0]. Why? Because the name for B will be replaced
     // by B(A) (its depth is 1, so this is done before renaming C,
     // which depth is 2). Now when we replace factor names in C,

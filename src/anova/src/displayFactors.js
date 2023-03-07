@@ -12,7 +12,7 @@
 
   function displayFactors() {
 
-    console.log('displayFactors() called');
+    //console.log('displayFactors() called');
 
     // Get the 'anova_debug' <div> to append data
     
@@ -27,7 +27,7 @@
     
     table += '<thead><tr><th>Name</th><th>Subs.</th>' +
              '<th>Type</th><th>Levels</th><th>Levels\' Codes</th>' +
-             '<th>Nested in</th></tr></thead><tbody>';
+             '<th>Nested</th><th>Nested in</th></tr></thead><tbody>';
     
     // Append rows. Th subscript for the current factor
     // starting in 'i' (the first factor) is given by the
@@ -41,8 +41,9 @@
                '<td>' + String.fromCharCode(i+105) + '</td>' +
                '<td>' + factors[i].type + '</td>' +
                '<td>' + factors[i].nlevels.toString() + '</td>' +
-               '<td>' + factors[i].levels.toString(); + '</td>' +
-               '<td>' + factors[i].nestedin.toString(); + '</td></tr>';
+               '<td>' + factors[i].levels.toString() + '</td>' +
+               '<td>' + (factors[i].nested?'TRUE':'FALSE') + '</td>' +
+               '<td>' + factors[i].nestedin.toString() + '</td></tr>';
     }
     
     table += '</tbody></table><div>';

@@ -14,7 +14,7 @@
   //#DEBUG
   function displayCells() {
 
-    console.log('displayCells() called');
+    //console.log('displayCells() called');
 
     let d = document.getElementById('debug'); 
     

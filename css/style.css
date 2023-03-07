@@ -91,10 +91,16 @@ thead, th {
   overflow: hidden;
   border: 2px solid black; }
 
+button {
+  background-color: #EFEFEF; }
+
 .right {
   float: right;
   margin: 0px 5px 0px 5px; }
 
 .ctcomp {
-  text-decoration: bold;
   color: red; }
+
+.random {
+  font-style: italic;
+  font-family: Georgia, Times, serif; }

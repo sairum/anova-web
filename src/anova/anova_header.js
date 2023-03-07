@@ -10,7 +10,7 @@ var anova = (function () {
 
   var filename= '';
 
-  const DPL  = 5; // Number of decimal places
+  var DPL  = 4; // Number of decimal places
 
   // Define these two constants which denote factor types. The choice of 0
   // for 'random' is not irrelevant. Terms in a ANOVA may be combinations of
@@ -213,8 +213,8 @@ var anova = (function () {
   // default rejection level (alpha)
   const DEFAULT_REJECTION_LEVEL = 0.05;
 
-  // Use a rejection criterium (alpha)
-  var alpha = false;
+  // Use a rejection criterion (alpha)
+  var alpha = true;
 
   // set default rejection level for ANOVA F tests
   var rejection_level = DEFAULT_REJECTION_LEVEL;
@@ -227,5 +227,7 @@ var anova = (function () {
   // participate in significant interactions
 
   var ignoreinteractions = false;
+
+
 
 

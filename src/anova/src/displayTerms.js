@@ -11,7 +11,7 @@
   //#DEBUG
   function displayTerms( title = '') {
 
-    console.log('displayTerms() called');
+    //console.log('displayTerms() called');
 
     let d = document.getElementById('debug'); 
     

@@ -2,21 +2,20 @@
 
   /****************************************************************************/
   /*                                                                          */
-  /*           Compute a list of a posteriori muliple comparisons             */
+  /*                               buildPostHocTests                          */
   /*                                                                          */
   /* Check for terms that display significant F-statistics (differences       */
   /* between averages of a fixed factor). For the sake of simplicity restrict */
-  /* a posteriori tests to terms denoting up to second order interactions     */
-  /* (that is, involving trhee factors). The list is called 'mcomps' and will */
-  /* be fed to a function that actually preforms a posteriori multiple        */
-  /* comparison tests.                                                        */
+  /* post hoc tests to terms involving no more than three factors, that is    */
+  /* second order interactions (A*B*C). The list is called 'mcomps' and will  */
+  /* be fed to a function that computes the actual Post Hoc tests             */
   /*                                                                          */
   /****************************************************************************/
    
-  function buildMultipleComparisons() {
+  function buildPostHocTests() {
 
     //#DEBUG
-    console.log('buildMultipleComparisons() called');
+    //console.log('buildMultipleComparisons() called');
     //!DEBUG
     
     //console.log(terms)
@@ -25,16 +24,15 @@
 
     // Iterate through all 'terms' that are not the Residual (Error) or
     // the Total terms (these two are easily identified because their
-    // attribute 'nlevels' = 0 and are in the end of the list of terms)
+    // attribute 'nlevels' is 0 and are in the end of the list of terms)
 
-    for(let term of terms ) {
-
-      console.log(term)
+    for( let term of terms ) {
 
       // Consider only those terms which have an F probability smaller than
-      // the rejection level specified (usually 0.05). Also, ignore
-      // interactions with more than three factors for simplicity
-      // (terms with 'order' > 3).
+      // the rejection level specified (usually 0.05). Also, to make things
+      // simpler, ignore interactions involving more than three factors
+      // (terms with 'order' > 3) or terms with 'no tests' for which the
+      // attribute 'against' is -1).
 
       if( ( term.P < rejection_level ) && ( term.nlevels > 0 ) &&
           ( term.order < 4 ) && ( term.against !== -1 ) ) {
@@ -43,11 +41,10 @@
         // factors. Multiple tests are useless for random factors. Go along
         // the array 'terms[].codes' for the current term (ignoring the last
         // element which stands for the Error component) and annotate any
-        // factor involved ('codes[] == 1) which is of type "fixed". This
+        // factor involved ('codes[] == 1) which is of type "FIXED". This
         // will be called the target factor. All candidate comparisons will
-        // be stored in 'mcomps', an array of JSON objects that will hold
-        // all the necessary information for processin an a_posteriori
-        // multiple test
+        // be stored in 'mcomps', an array of objects that will hold all the
+        // necessary information for processin a Post Hoc test
 
         for (let i = 0, fl = factors.length; i < fl; i++ ) {
 
@@ -90,6 +87,9 @@
 
             tgt.term = term.name;
 
+            // Store the term's codes involved in this term
+            tgt.codes = term.codes;
+
             // For some multiple tests the 'df' and the 'MS' of the term
             // used in the denominator of the F test for this particular
             // term ('term[t].against') is needed, so we pass it through
@@ -102,7 +102,7 @@
             // necessary. These averages are the averages of the levels of
             // the 'tgt' factor. They will be passed in an array containing
             // the level 'name' (not its 'code'), the number of replicates
-            //used to compute the average of each level, and the
+            // used to compute the average of each level, and the
             // corresponding variance. This is easy if the 'term' being
             // considered (t) corresponds to a main factor (which has
             // 'term[t].order' == 1) as all necessary values are stored in
@@ -228,10 +228,71 @@
         }
       }
     }
-    
-//     We have scanned all terms. 'target' has a list of all possible
-//     comparisons!
-    
-    console.log('mcomps: ',mcomps);
+
+    //     We have scanned all terms. 'mcomps' has a list of all possible
+    //     comparisons!
+
+    if ( mcomps.length > 0 ) {
+
+      // If 'ignoreinteractions' is not enabled (true) we must eliminate
+      // from post hoc tests any test that includes factors or interactions
+      // involved in other interactions of higher order! For example, if
+      // interaction AxCxD is significant (in a four factor ANOVA involving
+      // also factor B), post hoc tests for levels of A, C, D, AxC, AxD and
+      // CxD should not be computed. This is the correct behaviour, and has
+      // been explained in many articles on the ANOVA. If the interaction
+      // AxCxD is significant, it means that differences on averages of A
+      // depend on the combination of the levels of C and D being considered.
+      // This logic extends also to differences among means of the other two
+      // factors (C and D). However, note that it's still possible to inspect
+      // differences between levels of factor B, provided it is not involved
+      // in a significant interaction with any of the other three factors.
+
+      if ( !ignoreinteractions ) {
+
+        // If there is just a single factor to be analyzed, go ahead and do
+        // the post hoc tests for it. Otherwise, check if it is involved in
+        // higher order interactions, in which case it should be excluded.
+        // We go from top ( main factors) to bottom of 'mcomps' and for each
+        // candidate we check if there is any other 'mcomp' where the codes
+        // of the current ('i') 'mcomp' are also present.
+
+        if ( mcomps.length > 1 ) {
+          for ( let i = 0; i < mcomps.length - 1; i++ ) {
+            for ( let j = i + 1; j < mcomps.length; j++ ) {
+
+              // Check if we are not comparing differnt comparisons
+              // among components of the same term
+
+              if ( mcomps[i].term != mcomps[j].term ) {
+
+                // Go along the codes of 'mcomp[j].codes' and check if
+                // they include all codes in 'mcomp[i].codes'
+                let included = true;
+
+                for ( let k = 0; k < mcomps[i].codes.length; k++) {
+                  if ( ( mcomps[j].codes[k] > 0 ) &&
+                       ( mcomps[i].codes[k] === 0 ) ) included = false;
+                }
+                if ( included == false ) mcomps[i].excluded = true;
+
+              }
+            }
+          }
+        }
+
+
+
+      }
+
+      // console.log(mcomps);
+
+      // Display the tab with multiple comparisons if any is selected
+
+      computePostHocTests();
+
+    }
+
+    //console.log(factors)
   }
   

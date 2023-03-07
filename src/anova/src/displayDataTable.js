@@ -10,7 +10,7 @@
   function displayDataTable() {
 
     //#DEBUG
-    console.log('displayDataTable() called');
+    //console.log('displayDataTable() called');
     //!DEBUG
 
     let tb = document.getElementById( 'datatable' );
@@ -22,29 +22,37 @@
     for(let i = 0, nf = factors.length; i < nf; i++ ) {
       table += '<th>' + factors[i].name + '</th>';
     }
-    table += '<th>DATA</th></tr></thead><tbody>';
+    table += '<th>DATA</th></tr></thead>';
 
-    let lcodes = '';
+    // Build a line to denote if factors are 'FIXED' or 'RANDOM'
+    // This will allow one to change this attribute if the factor
+    // is not nested, in which case it is 'RANDOM' (mandatory)
+
+    table += '<tbody>'
+
+    let lcodes;
 
     // Go along all ANOVA cells in 'data'
 
-    for( let i = 0, len = data.length; i < len; i++ ) {
+    for( let c of data ) {
 
       // Compute the level codes for each factor to be used by
       // all data values belonging to an ANOVA cell
 
       lcodes = '';
 
-      for(let j = 0, ll = data[i].levels.length; j < ll; j++ ) {
-        lcodes += '<td>' + data[i].levels[j] + '</td>';
+      for(let l of c.levels ) {
+        lcodes += '<td>' + l + '</td>';
       }
 
       // For each ANOVA cell display all of its data 'values' but
       // prepend the factor levels before
 
-      for( let j = 0, cl = data[i].values.length; j < cl; j++ ) {
+      for( let v of c.values ) {
         table += '<tr>' + lcodes;
-        table += '<td>' + data[i].values[j].toString() + '</td>';
+        table += '<td class="flt">' +
+                 v.toLocaleString(undefined, { minimumFractionDigits: DPL }) +
+                 '</td>';
         table += '</tr>';
       }
     }

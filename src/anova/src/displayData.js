@@ -9,7 +9,7 @@
   function displayData() {
 
     //#DEBUG
-    console.log('displayData() called');
+    //console.log('displayData() called');
     //!DEBUG
     
     let tb = document.getElementById('datatab');

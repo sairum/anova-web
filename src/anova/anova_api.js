@@ -13,11 +13,12 @@
     openDataFile: openDataFile,
     resetData: resetData,
     transformData: transformData,
-    multipleTests: multipleTests,
-    displaySettings: displaySettings,
+    computePostHocTests: computePostHocTests,
+    changeSettings: changeSettings,
     setSettings: setSettings,
     useAlpha: useAlpha,
-    ignoreInteractions: ignoreInteractions
+    ignoreInteractions: ignoreInteractions,
+    setPrecision: setPrecision
     
   } // End of 'return' (exported function)
   
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   document.getElementById('activate_settings').onclick = function() {
-    anova.displaySettings();
+    anova.changeSettings();
   };
     
 });
