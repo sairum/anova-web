@@ -1,4 +1,4 @@
-.PHONY: css anovajs simulatejs samplejs chartjs clean watch optimize
+.PHONY: css anovajs simulatejs samplejs chartjs supportjs examplesjs clean watch optimize
 
 #CAT = @cat
 CAT =	@sed '/\#DEBUG/,/!DEBUG/d'
@@ -12,6 +12,11 @@ simulate = src/simulate/src/*.js
 sample = src/sample/src/*.js
 
 chart = src/chart/chart.js
+
+support = src/support/support.js
+
+examples = src/examples/examples.js
+
 
 css: $(cssfiles)
 	@echo Built style.css
@@ -38,24 +43,33 @@ samplejs: $(sample)
 chartjs: $(chart) 
 	@echo Building chart.js
 	$(CAT) src/chart/chart.js > js/chart.js
+
+supportjs: $(support)
+	@echo Building support.js
+	$(CAT) src/support/support.js > js/support.js
+
+examplesjs: $(examples)
+	@echo Building examples.js
+	$(CAT) src/examples/examples.js > js/examples.js
 	
 watch:
 	@echo Watching for changes...
 	@while true; do \
 		inotifywait -qr -e close -e create -e delete \
-		src/anova/*.js src/anova/src/*.js \
-		src/simulate/*.js src/simulate/src/*.js \
-		src/sample/*.js src/sample/src/*.js \
-		src/chart/*.js src/css/*.scss; \
-		make optimize; \
+		src/anova/*.js src/anova/src/*.js src/simulate/*.js \
+		src/simulate/src/*.js src/examples/*.js src/sample/*.js \
+		src/sample/src/*.js src/support/*.js src/chart/*.js \
+		src/css/*.scss; make optimize; \
 	done
 	
-optimize: anovajs css simulatejs chartjs samplejs 
+optimize: anovajs css simulatejs chartjs samplejs supportjs examplesjs
 #	@echo Optimizing...
 	@jsmin < js/anova.js > js/anova.min.js
 	@jsmin < js/simulate.js > js/simulate.min.js
 	@jsmin < js/sample.js > js/sample.min.js
 	@jsmin < js/chart.js > js/chart.min.js
+	@jsmin < js/support.js > js/support.min.js
+	@jsmin < js/examples.js > js/examples.min.js
 	@jsmin < css/style.css > css/style.min.css
 # 	@minify js/anova.js > js/anova.min.js
 # 	@minify js/simulate.js > js/simulate.min.js
@@ -65,4 +79,4 @@ optimize: anovajs css simulatejs chartjs samplejs
 #@yuicompressor assets/all.js -o assets/all.js
 	
 clean:
-	@rm -f js/anova*.js js/simulate*.js js/sample*.js js/chart*.js 
+	@rm -f js/anova*.js js/simulate*.js js/sample*.js js/chart*.js js/support*.js
