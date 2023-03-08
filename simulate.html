@@ -16,8 +16,7 @@
         
         <main>
           <div class="main">
-            <button class="button" onclick="ui.addFactor()">Add Factor</button>&nbsp;&nbsp;&nbsp;
-            Factor name <input type="text" id="fname">&nbsp;&nbsp;&nbsp;
+            Factor name <input type="text" id="fname" oninput="ui.enableFactor()">&nbsp;&nbsp;&nbsp;
             Factor type <select id="ftype">
               <option value="fixed" selected>Fixed</option>
               <option value="random">Random</option>
@@ -25,17 +24,19 @@
             Levels <input type="number" id="levels" min="2" max="1000" step="1" value="2">&nbsp;&nbsp;&nbsp;
             Nested in <select id="nestedin" disabled>
               <option value="-" selected>None</option>
-            </select>
+            </select>&nbsp;&nbsp;&nbsp;
+            <button class="button" id="add_factor" onclick="ui.addFactor()" disabled>Add Factor</button>
+            <button class="right" id="help">Help</button>
           </div>
           
           <div class="main" id="model">
-          Model
+          Linear Model
           </div>
           
           <div class="main">
             <div id="tabs">
-              <a href="#!" id="tdata"    class="tabs" onclick="ui.select('data')">Data</a>
-              <a href="#!" id="tresults" class="tabs" onclick="ui.select('results')">Results</a>
+              <a href="#!" id="tdata"    class="tabs" onclick="ui.selectTab('data')">Data</a>
+              <a href="#!" id="tresults" class="tabs" onclick="ui.selectTab('results')">Results</a>
             </div>
             <div id="tab-contents">
               <div class="tabcontent" id="data">
@@ -45,16 +46,16 @@
                 <td><em>n</em> (replicates)</td><td><input type="number" id="replicates" min="2" value="5" step="1"></td>
                 </tr>
                 <tr>
-                <td>&mu; (average)</td><td><input type="number" id="average" min="0.0" value="5.0"></td>
+                <td>&mu; (average)</td><td><input type="number" id="average" value="10.0"></td>
                 </tr>
                 <tr>
-                <td>&sigma; (stdev)</td><td><input type="number" id="stdev" min="0.00001" value="0.5" step="0.005"></td>
+                <td>&sigma; (stdev)</td><td><input type="number" id="stdev" min="0.0" value="1.0" step="0.5"></td>
                 </tr>
                 <tr>
-                <td>Max</td><td><input type="number" id="max" value="7.0" disabled></td>
+                <td>Max</td><td><input type="number" id="max" value="13.0" disabled></td>
                 </tr>
                 <tr>
-                <td>Min</td><td><input type="number" id="min" value="3.0" disabled></td>
+                <td>Min</td><td><input type="number" id="min" value="7.0" disabled></td>
                 </tr>
                 </table>
                 </div>
@@ -70,16 +71,13 @@
                   <td>Seed</td><td><input id="seed" placeholder="empty is random"></td>
                   </tr>
                   <tr>
-                  <td></td><td><button class="button" id="generate" onclick="ui.generate()" disabled>Generate</button></td>
+                  <td></td><td><button class="button" id="generate" onclick="ui.generateData()" disabled>Generate</button></td>
                   </tr>
                   <tr>
-                  <td></td><td><button class="button" id="download" onclick="ui.download()" disabled>Download</button></td>
+                  <td></td><td><button class="button" id="download" onclick="ui.downloadData()" disabled>Download</button></td>
                   </tr>
                   <tr>
-                  <td></td><td><button class="button" id="separator" onclick="ui.separator()" value="," disabled>Dec. separator = , (comma)</button></td>
-                  </tr>    
-                  <tr>
-                  <td></td><td><button class="button" onclick="ui.reset()">Reset</button></td>
+                  <td></td><td><button class="button" onclick="ui.resetData()">Reset</button></td>
                   </tr>
                   </table>
                 </div> 
