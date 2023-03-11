@@ -449,7 +449,7 @@ function enableFactor() {
         stdev = parseFloat(document.getElementById("stdev").value),
         replicates = parseInt(document.getElementById("replicates").value);
     
-    // Jstat does not handle directly RNGs. To use a costum seed we have
+    // jStat does not handle directly RNGs. To use a custom seed we have
     // to  resort to a user's defined RNG that allows seed setting. Here
     // we implement this with davidbau's "seedrandom.js" available at
     // https://github.com/davidbau/seedrandom

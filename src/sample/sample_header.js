@@ -1,6 +1,6 @@
 "use strict";
 
-var sample = (function () {
+var ui = (function () {
      
   /*************************************************************************/
   /*                                                                       */
@@ -8,15 +8,9 @@ var sample = (function () {
   /*                                                                       */
   /*************************************************************************/  
 
-  /*
-   * Number of decimal places for floating point numbers
-   */
+  // Number of decimal places for floating point numbers
   
-  var precision = 4;
+  var DPL = 6;
+
+
   
-  /*
-   * Decimal separator. Default is dot (.) but may be
-   * a comma (,) for non english languages
-   */
-  
-  var separator = ".";

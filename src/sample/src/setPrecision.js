@@ -1,16 +1,16 @@
   
-  function setPrecision() {
-    let s = document.getElementById("precision").value;
-    precision = parseInt(s);
-    if(precision < 1) {
-      document.getElementById("precision").value = 1;
-      precision = 1;
+  function setPrecision( tag ) {
+    let s = document.getElementById( tag + '_precision' ).value;
+    DPL = parseInt(s);
+    if(DPL < 1) {
+      document.getElementById( tag + '_precision' ).value = 1;
+      DPL = 1;
     } else {
-      if(precision > 10) { 
-        document.getElementById("precision").value = 10;
-        precision = 10; 
+      if(DPL > 10) {
+        document.getElementById( tag + '_precision' ).value = 10;
+        DPL = 10;
       } else {
-        document.getElementById("precision").value = precision;
+        document.getElementById( tag + '_precision' ).value = DPL;
       }    
     }    
   }

@@ -36,7 +36,7 @@ The proper way to install **anova-web** is to clone this project and copy all *\
 * sampling.html
 * simulate.html
 
-The *src/* directory is not necessary unless you intend to modify or improve the software. All code resides on the *js/* directory, either minified or not, The *\*.html* files use the minified versions of the JavaScript files found under *js/*.
+The *src/* directory is not necessary unless you intend to modify or improve the software. All code resides on the *js/* directory, either minified or not. The *\*.html* files use the minified versions of the JavaScript files found under *js/*.
 
 ### Local installation
 

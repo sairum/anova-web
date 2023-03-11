@@ -7,32 +7,64 @@
   /*************************************************************************/
   
   return {
-    setAccordion: setAccordion,
     reset: reset,
     sampleNormal: sampleNormal,
     sampleNormalNTimes: sampleNormalNTimes,
     setVar: setVar,
     setSTD: setSTD,
     setPrecision: setPrecision,
-    switchDecSep: switchDecSep,
     multipleFTests: multipleFTests,
     multipleTTests: multipleTTests,
-    tTest: tTest
+    tTest: tTest,
+    FTest: FTest,
+    setupForms: setupForms
   } // End of 'return' (exported function)
   
 })();
 
-//  /*
-//   * Automatically change variance when standard deviation changes
-//   */
-// 
-// document.getElementById("norm_std").addEventListener("onchange", sample.set_normVar());
-// document.getElementById("clt_std").addEventListener("onchange", sample.set_cltVar());
-// 
+
+/*************************************************************************/
+/*                                                                       */
+/* Function used to 'simulate' a tab behaviour for each menu entry in    */
+/* the main bar                                                          */
+/*                                                                       */
+/*************************************************************************/
+
+function selectTab( name ) {
+
+  let tabs = document.getElementsByClassName('tabs');
+
+  for (let t of tabs ) {
+    if( t.name == name ) {
+      t.classList.toggle('selected');
+    }
+    else t.classList.remove('selected');
+  }
+
+  // Get all elements with class='tabcontent' and hide them
+  // showing only the one selected
+  let tabcontent = document.getElementsByClassName('tabcontent');
+
+  for (let t of tabcontent ) {
+    if ( t.id == name ) {
+      t.style.display = 'block';
+    }
+    else t.style.display = 'none';
+  }
+
+  // Enable main tab contents if hidden
+
+  tabs = document.getElementById('tab-contents');
+  tabs.style.display = 'block';
+}
 
 document.addEventListener("DOMContentLoaded", function () {
-    
-  sample.setAccordion();
-  
+
+  // Hide all tab contents
+  let elem = document.getElementsByClassName('tabcontent');
+  for (let el of elem ) el.style.display = 'none';
+
+  ui.setupForms();
+
   
 });    
