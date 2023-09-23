@@ -96,5 +96,9 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('activate_settings').onclick = function() {
     anova.changeSettings();
   };
+
+  document.getElementById('help').onclick = function() {
+    window.open('docs/anova.html', '_blank', 'toolbar=no,scrollbars=yes,resizable=no,top=100,left=100,width=600,height=500');
+  };
     
 });

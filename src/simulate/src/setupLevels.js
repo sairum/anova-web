@@ -27,7 +27,7 @@
     b.className = 'tabs';
     b.href = "#!";
     b.innerHTML = f.name;
-    b.onclick = function () { selectFcator(f.name) };
+    b.onclick = function () { selectTab(f.name) };
     t.insertBefore(b, r);
 
     // Add also a correspondent content area for the new factor
@@ -40,8 +40,7 @@
     d.id = f.name;
     
     // At this stage the matrix 'recoded' holds
-    //console.log(fnum,combins)
-
+    // console.log(fnum,combins)
     console.log(f,combins,recoded);
     let text = '<h3>Labels for levels of Factor ' + f.name + '</h3><table>';
     for ( let i = 0; i < f.true_levels; i++ ) {

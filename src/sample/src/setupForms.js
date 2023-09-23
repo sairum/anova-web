@@ -75,17 +75,17 @@
       tag : '<input type="number" id="ttest_avg" value="8.0">' },
     { name: '&sigma; (stdev)',
       tag : '<input type="number" id="ttest_std" min="0.1" value="1.5" ' +
-            'step="0.1"  onchange="sample.setVar(\'ttest\')">' },
+            'step="0.1"  onchange="ui.setVar(\'ttest\')">' },
     { name: '&sigma;&sup2; (variance)',
       tag : '<input type="number" id="ttest_var" value="2.25" ' +
-            'onchange="sample.setSTD(\'ttest\')">' },
+            'onchange="ui.setSTD(\'ttest\')">' },
     { name: 'n (replicates)',
       tag : '<input type="number" id="ttest_n" value="10">' },
     { name: '',
       tag : '' },
     { name: 'Precision',
       tag : '<input type="number" id="precision" min="1" max="10" ' +
-            'value="6" step ="1" onchange="sample.setPrecision(\'ttest\')">'},
+            'value="6" step ="1" onchange="ui.setPrecision(\'ttest\')">'},
     { name: '',
       tag : '<button class="button" onclick="ui.tTest()">' +
             'Generate</button>' },
@@ -154,7 +154,7 @@
       tag : '<button class="button" onclick="ui.reset(\'ftest\')">' +
             'Reset</button>' } ];
 
-  // Parameters for the sampling multiple variances and performing F-tests to
+  // Parameters for sampling multiple variances and performing F-tests to
   // build the empirical central F distribution.
 
   let mftestsparams = [
