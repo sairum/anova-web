@@ -1,3 +1,5 @@
+## *This repository was moved to Codeberg*
+
 # anova-web
 a web-based analysis of variance
 
